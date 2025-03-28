@@ -1,30 +1,77 @@
-import { Link } from "react-router-dom"
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '../components/ui/button';
 
 const NotFoundPage = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <div className="max-w-md w-full text-center">
-        <h1 className="text-9xl font-extrabold text-gray-900 dark:text-white">404</h1>
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">Page Not Found</h2>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <div className="mt-8 space-y-4">
-          <Link to="/">
-            <button className="w-full px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-              Go to Home
-            </button>
-          </Link>
-          <Link to="/dashboard">
-            <button className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-              Go to Dashboard
-            </button>
-          </Link>
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="text-center space-y-6">
+        {/* 404 Illustration */}
+        <div className="relative">
+          <h1 className="text-9xl font-bold text-gray-200">404</h1>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-32 h-32 bg-white rounded-full shadow-lg flex items-center justify-center">
+              <svg
+                className="w-16 h-16 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Page Not Found
+          </h2>
+          <p className="text-gray-600 max-w-md mx-auto">
+            The page you're looking for doesn't exist or has been moved. Let's get you back on track!
+          </p>
+        </div>
+
+        {/* Navigation Options */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button asChild>
+            <Link to="/">
+              Go to Homepage
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={() => window.history.back()}>
+            Go Back
+          </Button>
+        </div>
+
+        {/* Helpful Links */}
+        <div className="mt-8 text-sm text-gray-500">
+          <p className="mb-2">Need help? Try these links:</p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link to="/dashboard" className="hover:text-gray-900">
+              Dashboard
+            </Link>
+            <Link to="/schedule" className="hover:text-gray-900">
+              Schedule
+            </Link>
+            <Link to="/profile" className="hover:text-gray-900">
+              Profile
+            </Link>
+            <Link to="/settings" className="hover:text-gray-900">
+              Settings
+            </Link>
+          </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default NotFoundPage
+export default NotFoundPage;
 

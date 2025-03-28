@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { AuthContext } from "../contexts/AuthContext"
 
 
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
