@@ -16,7 +16,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProfilePage from "./pages/ProfilePage";
-// import SettingsPage from "./pages/SettingsPage";
+import SettingsPage from "./pages/SettingsPage";
 import SchedulePage from "./pages/SchedulePage";
 // import NotFoundPage from "./pages/NotFoundPage";
 // import InterviewPage from "./pages/InterviewPage1";
@@ -95,14 +95,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* <Route
+          <Route
             path="/settings"
             element={
               <ProtectedRoute>
                 <SettingsPage />
               </ProtectedRoute>
             }
-          /> */}
+          />
           {/* <Route
             path="/interview"
             element={

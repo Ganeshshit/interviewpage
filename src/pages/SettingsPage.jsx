@@ -1,10 +1,9 @@
-
 import React, { useState } from "react"
 import DashboardLayout from "../components/DashboardLayout"
-import { AuthContext } from "../contexts/AuthContext"
+import { useAuth } from "../context/AuthContext"
 
 const SettingsPage = () => {
-  const { user } = React.useContext(AuthContext)
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("account")
   const [passwordData, setPasswordData] = useState({
     current_password: "",
@@ -189,7 +188,7 @@ const SettingsPage = () => {
                       <div className="mt-1 flex rounded-md shadow-sm">
                         <input
                           type="text"
-                          value={user?.created_at.split('T')[0] || ""}
+                          value={user?.created_at ? user.created_at.split('T')[0] : 'N/A'}
                           disabled
                           className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                         />
