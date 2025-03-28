@@ -1,11 +1,10 @@
-
-import { useState, useEffect, useContext } from "react"
+import { useState, useEffect } from "react"
 import DashboardLayout from "../components/DashboardLayout"
-import { AuthContext } from "../contexts/AuthContext"
+import { useAuth } from "../context/AuthContext"
 import api from "../services/api"
 
 const ProfilePage = () => {
-  const { user } = useContext(AuthContext)
+  const { user } = useAuth()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

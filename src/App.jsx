@@ -15,7 +15,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
-// import ProfilePage from "./pages/ProfilePage";
+import ProfilePage from "./pages/ProfilePage";
 // import SettingsPage from "./pages/SettingsPage";
 import SchedulePage from "./pages/SchedulePage";
 // import NotFoundPage from "./pages/NotFoundPage";
@@ -87,14 +87,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* <Route
+          <Route
             path="/profile"
             element={
               <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
             }
-          /> */}
+          />
           {/* <Route
             path="/settings"
             element={
