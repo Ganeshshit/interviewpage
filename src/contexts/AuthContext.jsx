@@ -19,11 +19,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
-    try {
-      // TODO: Implement actual login logic with backend
-      setIsAuthenticated(true);
-      setUser({ id: 1, role: 'user' }); // Replace with actual user data
-      localStorage.setItem('authToken', 'dummy-token');
+      try {
+        if (credentials.email === 'admin@gmail.com' && credentials.password === 'admin') {
+          // TODO: Implement actual login logic with backend
+          setIsAuthenticated(true);
+          setUser({ id: 1, role: 'user' }); // Replace with actual user data
+          localStorage.setItem('authToken', 'dummy-token');
+        } else {
+          throw new Error('Invalid credentials');
+        }
     } catch (error) {
       throw error;
     }
