@@ -89,25 +89,25 @@ code {
 } */
 
 /* Container styles */
-.container {
+/* .container {
   @apply mx-auto px-4 sm:px-6 lg:px-8;
   max-width: 1400px;
-}
+} */
 
 /* Landing page specific styles */
-.hero-section {
+/* .hero-section {
   @apply flex flex-col items-center justify-center text-center py-16 px-4;
-}
+} */
 
-.hero-title {
+/* .hero-title {
   @apply text-4xl md:text-6xl font-bold mb-4;
-}
+} */
 
-.hero-subtitle {
+/* .hero-subtitle {
   @apply text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl;
-}
+} */
 
-.feature-grid {
+/* .feature-grid {
   @apply grid grid-cols-1 md:grid-cols-3 gap-8 py-16;
 }
 
@@ -117,4 +117,4 @@ code {
 
 .nav-header {
   @apply flex items-center justify-between w-full px-4 py-4 bg-background border-b;
-}
+} */
