@@ -48,3 +48,79 @@
     --ring: 0 0% 83.1%;
   }
 }
+
+@layer base {
+  * {
+    @apply border-[hsl(var(--border))];
+  }
+
+  body {
+    @apply bg-background text-foreground min-h-screen antialiased;
+  }
+
+  html {
+    @apply antialiased;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+}
+
+/* Base styles */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* Link styles */
+a {
+  @apply text-primary hover:text-primary/90;
+  text-decoration: none;
+}
+
+/* Button reset */
+button {
+  @apply bg-transparent border-0 cursor-pointer p-0 m-0;
+  font: inherit;
+}
+
+/* Container styles */
+.container {
+  @apply mx-auto px-4 sm:px-6 lg:px-8;
+  max-width: 1400px;
+}
+
+/* Landing page specific styles */
+.hero-section {
+  @apply flex flex-col items-center justify-center text-center py-16 px-4;
+}
+
+.hero-title {
+  @apply text-4xl md:text-6xl font-bold mb-4;
+}
+
+.hero-subtitle {
+  @apply text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl;
+}
+
+.feature-grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-8 py-16;
+}
+
+.feature-card {
+  @apply p-6 rounded-lg border bg-card text-card-foreground;
+}
+
+.nav-header {
+  @apply flex items-center justify-between w-full px-4 py-4 bg-background border-b;
+}
