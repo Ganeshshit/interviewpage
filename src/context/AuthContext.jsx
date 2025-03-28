@@ -2,19 +2,36 @@ import React, { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   const login = async (credentials) => {
     try {
-      // Implement your login logic here
-      // For example:
-      // const response = await api.login(credentials);
-      // setUser(response.data);
-      setUser({ id: 1, name: 'Test User' }); // Temporary for testing
+      // TODO: Replace with actual API call
+      // For now, we'll simulate a successful login
+      setUser({
+        id: 1,
+        email: credentials.email,
+        name: 'Test User'
+      });
+      return true;
     } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
+      throw new Error('Login failed');
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      // TODO: Replace with actual API call
+      // For now, we'll simulate a successful registration
+      setUser({
+        id: 1,
+        email: userData.email,
+        name: userData.name
+      });
+      return true;
+    } catch (error) {
+      throw new Error('Registration failed');
     }
   };
 
@@ -22,24 +39,17 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const value = {
-    user,
-    login,
-    logout,
-    isAuthenticated: !!user,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === null) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}; 
