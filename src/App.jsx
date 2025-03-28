@@ -6,6 +6,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import { AuthProvider } from './context/AuthContext';
 // import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 
 // Pages
@@ -63,7 +64,7 @@ const RoleRoute = ({ roles, children }) => {
 
 function App() {
   return (
-    // <AuthProvider>
+    <AuthProvider>
       <Router>
         <Routes>
           {/* 🌐 Public Routes */}
@@ -169,7 +170,7 @@ function App() {
         <Route path="*" element={<NotFoundPage/>} />
         </Routes>
       </Router>
-    // </AuthProvider>
+    </AuthProvider>
   );
 }
 

@@ -1,26 +1,25 @@
-import React, { useState, useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { Button } from "../components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { AuthContext } from "../contexts/AuthContext"
-
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
+import { Label } from '../components/ui/label';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+  const { login } = useAuth();
+  const [credentials, setCredentials] = useState({
+    email: '',
+    password: '',
   });
-  const { login } = useContext(AuthContext)
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setCredentials((prev) => ({ ...prev, [name]: value }));
     // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => {
@@ -34,13 +33,13 @@ export default function LoginPage() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
+    if (!credentials.email) {
       newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(credentials.email)) {
       newErrors.email = "Email is invalid";
     }
 
-    if (!formData.password) {
+    if (!credentials.password) {
       newErrors.password = "Password is required";
     }
 
@@ -49,28 +48,19 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
-    setIsLoading(true)
-
+    e.preventDefault();
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
     try {
-      await login(formData.email, formData.password)
-      navigate("/dashboard")
-    } catch (error) {
-      console.error("Login failed:", error)
-      if (error.response && error.response.data && error.response.data.errors) {
-        setErrors(error.response.data.errors)
-      } else {
-        setErrors({ form: "Invalid email or password" })
-      }
+      await login(credentials);
+      navigate('/dashboard');
+    } catch (err) {
+      setErrors(prev => ({ ...prev, form: 'Login failed. Please check your credentials.' }));
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-0">
@@ -94,7 +84,7 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   placeholder="name@example.com"
-                  value={formData.email}
+                  value={credentials.email}
                   autoComplete="off"
                   onChange={handleChange}
                   className={errors.email ? "border-red-500" : ""}
@@ -112,7 +102,7 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
-                  value={formData.password}
+                  value={credentials.password}
                   onChange={handleChange}
                   placeholder="******"
                   className={errors.password ? "border-red-500" : ""}
