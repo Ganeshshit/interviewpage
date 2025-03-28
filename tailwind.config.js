@@ -1,22 +1,22 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-    darkMode: ['class'],
     content: [
         './index.html',
         './src/**/*.{js,ts,jsx,tsx}',
+        './src/components/**/*.{js,ts,jsx,tsx}',
+        './src/pages/**/*.{js,ts,jsx,tsx}',
+        './src/App.jsx',
+        './src/main.jsx',
     ],
+    darkMode: ['class'],
     theme: {
         extend: {
             colors: {
                 border: 'hsl(var(--border))',
                 input: 'hsl(var(--input))',
                 ring: 'hsl(var(--ring))',
-                background: {
-                    DEFAULT: 'hsl(var(--background))',
-                },
-                foreground: {
-                    DEFAULT: 'hsl(var(--foreground))',
-                },
+                background: 'hsl(var(--background))',
+                foreground: 'hsl(var(--foreground))',
                 primary: {
                     DEFAULT: 'hsl(var(--primary))',
                     foreground: 'hsl(var(--primary-foreground))',
