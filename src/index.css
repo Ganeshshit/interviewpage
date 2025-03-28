@@ -104,7 +104,7 @@ button {
 }
 
 .hero-subtitle {
-  @apply text-lg md:text-xl text-mutedForeground mb-8 max-w-2xl;
+  @apply text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl;
 }
 
 .feature-grid {
