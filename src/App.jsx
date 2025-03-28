@@ -6,7 +6,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 // import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 
 // Pages
@@ -14,10 +14,10 @@ import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-// import DashboardPage from "./pages/DashboardPage";
+import DashboardPage from "./pages/DashboardPage";
 // import ProfilePage from "./pages/ProfilePage";
 // import SettingsPage from "./pages/SettingsPage";
-// import SchedulePage from "./pages/SchedulePage";
+import SchedulePage from "./pages/SchedulePage";
 // import NotFoundPage from "./pages/NotFoundPage";
 // import InterviewPage from "./pages/InterviewPage1";
 // import CandidateInterviewPage from "./pages/CandidateInterviewPage";
@@ -30,17 +30,11 @@ import RegisterPage from "./pages/RegisterPage";
 
 // ✅ Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = React.useContext(AuthContext);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
+  const { user } = useAuth();
+  if (!user) {
+    return <Navigate to="/login" />;
   }
-
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return children;
 };
 
 // ✅ Role-based Route Component
@@ -71,27 +65,28 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-{/* 
-    {/* 
-    
-    🧑‍💻 Dynamic Routes for Interviews 
-          {/* 🔒 Protected Routes */}
-          {/* <Route
+          <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
                 <DashboardPage />
               </ProtectedRoute>
             }
-          /> */}
-          {/* <Route
+          />
+          {/* 
+    {/* 
+    
+    🧑‍💻 Dynamic Routes for Interviews 
+          {/* 🔒 Protected Routes */}
+
+          <Route
             path="/schedule"
             element={
               <ProtectedRoute>
                 <SchedulePage />
               </ProtectedRoute>
             }
-          /> */}
+          />
           {/* <Route
             path="/profile"
             element={
@@ -147,7 +142,6 @@ function App() {
             }
           /> */}
 
-          
           {/* <Route
             path="/interview/:roomId"
             element={
@@ -166,8 +160,8 @@ function App() {
             />  */}
 
           {/* ❌ 404 Route */}
-        {/* <Route path="*" element={<NotFoundPage />} /> */}
-        <Route path="*" element={<NotFoundPage/>} />
+          {/* <Route path="*" element={<NotFoundPage />} /> */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
     </AuthProvider>

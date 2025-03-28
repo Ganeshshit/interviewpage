@@ -1,12 +1,12 @@
-import { useState, useEffect, useContext } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import DashboardLayout from "../components/DashboardLayout"
-import { AuthContext } from "../contexts/AuthContext"
+import { useAuth } from "../context/AuthContext"
 import Modal from "../components/Modal.jsx"
 import api from "../services/api"
 
 const DashboardPage = () => {
-  const { user } = useContext(AuthContext)
+  const { user } = useAuth()
   const [upcomingInterviews, setUpcomingInterviews] = useState([])
   const [completedInterviews, setCompletedInterviews] = useState(0)
   const [activities, setActivities] = useState([])
@@ -74,7 +74,7 @@ const DashboardPage = () => {
     }, 60000)
 
     return () => clearInterval(timeInterval)
-  })
+  }, [])
 
   // Function to check if an interview is within 5 minutes of starting
   const isInterviewActive = (startTime, date) => {
@@ -326,12 +326,11 @@ const DashboardPage = () => {
         </div>
       </div>
       <Modal
-    show={showModal} 
-    onClose={handleCloseModal} 
-    interview={selectedInterview} 
-  />
+        show={showModal} 
+        onClose={handleCloseModal} 
+        interview={selectedInterview} 
+      />
     </DashboardLayout>
-    
   )
 }
 
