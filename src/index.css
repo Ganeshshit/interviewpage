@@ -49,6 +49,17 @@
   }
 }
 
+@layer base {
+  * {
+    @apply border-[hsl(var(--border))];
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -132,8 +143,6 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 
-
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -204,33 +213,5 @@ code {
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-}
-
-
-
-@layer base {
-  * {
-    @apply border-border p-0 m-0;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-
-
-
-
-
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
   }
 }
