@@ -112,7 +112,7 @@ button {
 }
 
 .feature-card {
-  @apply p-6 rounded-lg border bg-card text-cardForeground;
+  @apply p-6 rounded-lg border bg-card text-card-foreground;
 }
 
 .nav-header {
