@@ -11,7 +11,7 @@ import {
 // Pages
 import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
-// import LoginPage from "./pages/LoginPage";
+import LoginPage from "./pages/LoginPage";
 // import RegisterPage from "./pages/RegisterPage";
 // import DashboardPage from "./pages/DashboardPage";
 // import ProfilePage from "./pages/ProfilePage";
