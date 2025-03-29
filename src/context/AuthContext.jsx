@@ -4,6 +4,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Dummy user data for testing
   const dummyUsers = [
@@ -25,24 +26,25 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Find user in dummy data
-      const matchedUser = dummyUsers.find(
-        user => user.email === credentials.email && user.password === credentials.password
-      );
+      // Replace with actual API call
+      // Simulating an API response
+      const response = {
+        user: {
+          id: 1,
+          name: 'John Doe',
+          email: credentials.email,
+          role: 'interviewer', // This will be used for role-based access
+        },
+        token: 'mock-jwt-token',
+      };
 
-      if (!matchedUser) {
-        throw new Error('Invalid credentials');
-      }
-
-      // Remove password from user data before setting in state
-      const { password, ...userWithoutPassword } = matchedUser;
-      setUser(userWithoutPassword);
-      return true;
+      setUser(response.user);
+      setIsAuthenticated(true);
+      localStorage.setItem('token', response.token);
+      return { success: true };
     } catch (error) {
-      throw new Error('Login failed');
+      console.error('Login error:', error);
+      return { success: false, error: 'Invalid credentials' };
     }
   };
 
@@ -74,10 +76,36 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('token');
+  };
+
+  // Check if user is already logged in (e.g., on page refresh)
+  const checkAuth = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        // Replace with actual API call to validate token
+        // For now, we'll simulate it
+        const response = {
+          user: {
+            id: 1,
+            name: 'John Doe',
+            email: 'john@example.com',
+            role: 'interviewer',
+          },
+        };
+        setUser(response.user);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Auth check error:', error);
+        logout();
+      }
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

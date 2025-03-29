@@ -1,12 +1,12 @@
 import React from "react";
-import './index.css'
+import "./index.css";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from "./context/AuthContext";
 // import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 
 // Pages
@@ -18,7 +18,9 @@ import DashboardPage from "./pages/DashboardPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import SchedulePage from "./pages/SchedulePage";
-// import NotFoundPage from "./pages/NotFoundPage";
+import InterviewerDashboardPage from "./pages/InterviewerDashboardPage";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 // import InterviewPage from "./pages/InterviewPage1";
 // import CandidateInterviewPage from "./pages/CandidateInterviewPage";
 // import InterviewerPage from "./pages/InterviewerPage";
@@ -29,7 +31,7 @@ import SchedulePage from "./pages/SchedulePage";
 // import InterviewerDashboard from "./components/InterviewerDashboard";
 
 // ✅ Protected Route Component
-const ProtectedRoute = ({ children }) => {
+const ProtectedRouteComponent = ({ children }) => {
   const { user } = useAuth();
   if (!user) {
     return <Navigate to="/login" />;
@@ -48,7 +50,7 @@ const RoleRoute = ({ roles, children }) => {
       </div>
     );
   }
-  
+
   return user && roles.includes(user.role) ? (
     children
   ) : (
@@ -68,9 +70,9 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <DashboardPage />
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
           />
           {/* 
@@ -82,41 +84,41 @@ function App() {
           <Route
             path="/schedule"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <SchedulePage />
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
           />
           <Route
             path="/profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <ProfilePage />
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
           />
           <Route
             path="/settings"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <SettingsPage />
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
           />
           {/* <Route
             path="/interview"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <InterviewPage />
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
           /> */}
           {/* <Route
             path="/interview/candidate"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <CandidateView roomId={1234} />
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
           /> */}
 
@@ -124,44 +126,62 @@ function App() {
           {/* <Route
             path="/interviewer"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <RoleRoute roles={["interviewer", "admin"]}>
                   <InterviewerView roomId={1234} />
                 </RoleRoute>
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
           /> */}
           {/* <Route
             path="/interviewer-dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <RoleRoute roles={["interviewer", "admin"]}>
                   <InterviewerDashboard />
                 </RoleRoute>
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
           /> */}
 
           {/* <Route
             path="/interview/:roomId"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <InterviewPage isInterviewer={false} />
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
             /> */}
           {/* <Route
             path="/host/:roomId"
             element={
-              <ProtectedRoute>
+              <ProtectedRouteComponent>
                 <InterviewPage isInterviewer={true} />
-              </ProtectedRoute>
+              </ProtectedRouteComponent>
             }
             />  */}
 
           {/* ❌ 404 Route */}
           {/* <Route path="*" element={<NotFoundPage />} /> */}
+          <Route
+            path="/interviewer/dashboard"
+            element={
+              // <ProtectedRoute allowedRoles={["interviewer"]}>
+                <InterviewerDashboardPage />
+              // </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFoundPage />} />
+          <Route
+            path="/interviewer/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["interviewer"]}>
+                <InterviewerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
         </Routes>
       </Router>
     </AuthProvider>
