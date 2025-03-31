@@ -8,32 +8,41 @@ import {
   CheckCircle,
   UserCheck,
   ChevronRight,
+  Loader2
 } from "lucide-react";
 
 const InterviewerDashboardPage = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("upcoming");
   const [interviews, setInterviews] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    completedInterviews: 45,
-    averageRating: 4.8,
-    upcomingInterviews: 3,
-    totalHours: 67,
+    completedInterviews: 0,
+    averageRating: 0,
+    upcomingInterviews: 0,
+    totalHours: 0,
   });
 
   useEffect(() => {
-    // Mock Data
-    setInterviews([
-      {
-        id: 1,
-        candidateName: "John Doe",
-        date: "2024-03-25T10:00:00",
-        type: "Frontend Development",
-        level: "Senior",
-        status: "scheduled",
-      },
-    ]);
-  }, []);
+    if (user) {
+      // Calculate stats from user's interviews
+      const completedInterviews = user.completedInterviews || [];
+      const upcomingInterviews = user.interviews?.filter(
+        interview => interview.status === 'scheduled'
+      ) || [];
+
+      setStats({
+        completedInterviews: completedInterviews.length,
+        averageRating: completedInterviews.reduce((acc, curr) => acc + (curr.rating || 0), 0) / completedInterviews.length || 0,
+        upcomingInterviews: upcomingInterviews.length,
+        totalHours: (completedInterviews.length + upcomingInterviews.length) * 1.5 // Assuming 1.5 hours per interview
+      });
+
+      // Set interviews from user data
+      setInterviews(user.interviews || []);
+      setLoading(false);
+    }
+  }, [user]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -89,6 +98,26 @@ const InterviewerDashboardPage = () => {
     </div>
   );
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-[#fcc250]" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!isAuthenticated || user?.role !== 'interviewer') {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <p className="text-red-500">Unauthorized access. Please login as an interviewer.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -111,7 +140,7 @@ const InterviewerDashboardPage = () => {
           />
           <StatCard
             title="Average Rating"
-            value={`${stats.averageRating}/5.0`}
+            value={`${stats.averageRating.toFixed(1)}/5.0`}
             icon={<Star size={32} />}
           />
           <StatCard
@@ -148,28 +177,62 @@ const InterviewerDashboardPage = () => {
         {/* Tab Content */}
         {activeTab === "upcoming" && (
           <div className="space-y-4">
-            {interviews.map((interview) => (
-              <InterviewCard key={interview.id} interview={interview} />
-            ))}
+            {interviews.filter(interview => interview.status === 'scheduled').length > 0 ? (
+              interviews
+                .filter(interview => interview.status === 'scheduled')
+                .map((interview) => (
+                  <InterviewCard key={interview.id} interview={interview} />
+                ))
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No upcoming interviews scheduled.
+              </p>
+            )}
           </div>
         )}
 
         {activeTab === "past" && (
           <div className="space-y-4">
-            {/* Past interviews */}
-            <p className="text-sm text-gray-500">
-              No past interviews available.
-            </p>
+            {interviews.filter(interview => interview.status === 'completed').length > 0 ? (
+              interviews
+                .filter(interview => interview.status === 'completed')
+                .map((interview) => (
+                  <InterviewCard key={interview.id} interview={interview} />
+                ))
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No past interviews available.
+              </p>
+            )}
           </div>
         )}
 
         {activeTab === "availability" && (
           <div className="space-y-4">
-            {/* Availability */}
             <div className="bg-white dark:bg-[#29354d] rounded-xl p-5 shadow-md">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                 Manage Availability
               </h3>
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Current Availability
+                </h4>
+                {user?.availability?.length > 0 ? (
+                  <div className="space-y-2">
+                    {user.availability.map((slot, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">
+                          {slot.date}: {slot.slots.join(", ")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No availability set
+                  </p>
+                )}
+              </div>
               <button className="px-4 py-2 bg-[#fcc250] text-[#29354d] rounded-md hover:bg-[#ffbb33]">
                 Update Availability
               </button>

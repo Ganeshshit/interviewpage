@@ -53,10 +53,24 @@ export default function LoginPage() {
     
     setIsLoading(true);
     try {
-      await login(credentials);
-      navigate('/dashboard');
+      const result = await login(credentials);
+      if (result.success) {
+        // Redirect based on user role
+        if (result.user.role === 'interviewer') {
+          navigate('/interviewer/dashboard');
+        } else if (result.user.role === 'candidate') {
+          navigate('/dashboard');
+        } else {
+          throw new Error('Invalid user role');
+        }
+      } else {
+        throw new Error(result.error || 'Login failed');
+      }
     } catch (err) {
-      setErrors(prev => ({ ...prev, form: 'Login failed. Please check your credentials.' }));
+      setErrors(prev => ({ 
+        ...prev, 
+        form: err.message || 'Login failed. Please check your credentials.' 
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +124,9 @@ export default function LoginPage() {
                 {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               </div>
               {errors.form && (
-                <div className="bg-red-50 dark:bg-red-900/20 text-red-500 p-3 rounded-md text-sm">{errors.form}</div>
+                <div className="bg-red-50 dark:bg-red-900/20 text-red-500 p-3 rounded-md text-sm">
+                  {errors.form}
+                </div>
               )}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (

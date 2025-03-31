@@ -1,18 +1,24 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  // Check if user is not authenticated
   if (!isAuthenticated) {
+    // Redirect to login if not authenticated
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check if route requires specific roles and if user has required role
-  if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/unauthorized" replace />;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    // Redirect based on role if user doesn't have permission
+    if (user?.role === 'interviewer') {
+      return <Navigate to="/interviewer/dashboard" replace />;
+    }
+    if (user?.role === 'candidate') {
+      return <Navigate to="/dashboard" replace />;
+    }
+    return <Navigate to="/login" replace />;
   }
 
   return children;

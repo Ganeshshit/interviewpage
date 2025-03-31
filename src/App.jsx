@@ -58,6 +58,21 @@ const RoleRoute = ({ roles, children }) => {
   );
 };
 
+// Component to handle role-based redirection
+const RoleBasedRedirect = () => {
+  const { user } = useAuth();
+  
+  if (user?.role === 'interviewer') {
+    return <Navigate to="/interviewer/dashboard" replace />;
+  }
+  
+  if (user?.role === 'candidate') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <Navigate to="/login" replace />;
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -70,9 +85,9 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRouteComponent>
+              <ProtectedRoute allowedRoles={['candidate']}>
                 <DashboardPage />
-              </ProtectedRouteComponent>
+              </ProtectedRoute>
             }
           />
           {/* 
@@ -92,17 +107,17 @@ function App() {
           <Route
             path="/profile"
             element={
-              <ProtectedRouteComponent>
+              <ProtectedRoute allowedRoles={['interviewer', 'candidate']}>
                 <ProfilePage />
-              </ProtectedRouteComponent>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/settings"
             element={
-              <ProtectedRouteComponent>
+              <ProtectedRoute allowedRoles={['interviewer', 'candidate']}>
                 <SettingsPage />
-              </ProtectedRouteComponent>
+              </ProtectedRoute>
             }
           />
           {/* <Route
@@ -163,29 +178,19 @@ function App() {
 
           {/* ❌ 404 Route */}
           {/* <Route path="*" element={<NotFoundPage />} /> */}
+          <Route path="*" element={<RoleBasedRedirect />} />
           <Route
             path="/interviewer/dashboard"
             element={
-              // <ProtectedRoute allowedRoles={["interviewer"]}>
-                <InterviewerDashboardPage />
-              // </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<NotFoundPage />} />
-          <Route
-            path="/interviewer/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["interviewer"]}>
+              <ProtectedRoute allowedRoles={['interviewer']}>
                 <InterviewerDashboardPage />
               </ProtectedRoute>
             }
           />
-
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
         </Routes>
       </Router>
     </AuthProvider>
   );
 }
-
 export default App;
