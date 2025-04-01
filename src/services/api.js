@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'https://interviewbackend-zfwp.onrender.com/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -49,7 +49,7 @@ export const emailAPI = {
         ].filter(Boolean).join(', ')}`);
       }
 
-      const response = await fetch('http://localhost:5000/api/email/send', {
+      const response = await fetch('https://interviewbackend-zfwp.onrender.com/api/email/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
