@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     if (user?.role === 'candidate') {
       return <Navigate to="/dashboard" replace />;
     }
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return children;

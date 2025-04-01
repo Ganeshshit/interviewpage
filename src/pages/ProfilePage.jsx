@@ -47,6 +47,7 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profileImage, setProfileImage] = useState(null)
+  const [error, setError] = useState(null)
   
   // Separate form data for candidates and interviewers
   const [formData, setFormData] = useState(
@@ -79,52 +80,29 @@ const ProfilePage = () => {
   const [resume, setResume] = useState(null)
   const [message, setMessage] = useState({ type: "", text: "" })
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        // Use different endpoints based on user role
-        const endpoint = user?.role === 'interviewer' 
-          ? '/interviewer/profile' 
-          : '/candidate/profile';
-        
-        const response = await api.get(endpoint)
-        setProfile(response.data.profile)
-        
-        // Update form data based on role
-        if (user?.role === 'interviewer') {
-          setFormData({
-            expertise: response.data.profile.expertise?.join(', ') || '',
-            interviewLevels: response.data.profile.interviewLevels?.join(', ') || '',
-            department: response.data.profile.department || '',
-            bio: response.data.profile.bio || '',
-            phone: response.data.profile.phone || '',
-            location: response.data.profile.location || '',
-            github_url: response.data.profile.github_url || '',
-            linkedin_url: response.data.profile.linkedin_url || '',
-            website: response.data.profile.website || '',
-          })
-        } else {
-          setFormData({
-            skills: response.data.profile.skills?.join(', ') || '',
-            experience: response.data.profile.experience || '',
-            field_of_interest: response.data.profile.field_of_interest || '',
-            expertise_level: response.data.profile.expertise_level || '',
-            bio: response.data.profile.bio || '',
-            phone: response.data.profile.phone || '',
-            location: response.data.profile.location || '',
-            github_url: response.data.profile.github_url || '',
-            linkedin_url: response.data.profile.linkedin_url || '',
-            website: response.data.profile.website || '',
-          })
-        }
-        
-        setLoading(false)
-      } catch (error) {
-        console.error("Error fetching profile:", error)
-        setLoading(false)
-      }
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // If you're using mock data temporarily
+      const mockProfile = {
+        // ... your mock profile data
+      };
+      setProfile(mockProfile);
+      
+      // When you have the actual API:
+      // const response = await api.get('/profile');
+      // setProfile(response.data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setError('Failed to load profile. Please try again later.');
+    } finally {
+      setLoading(false);
     }
-  
+  };
+
+  useEffect(() => {
     if (isAuthenticated && user) {
       fetchProfile()
     }

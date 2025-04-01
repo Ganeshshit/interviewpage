@@ -1,43 +1,70 @@
-import React, { createContext, useContext, useState } from 'react';
-import { validateCredentials, getUserInterviews, getUserProfile } from '../data/userData';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { validateCredentials, getUserInterviews, getUserProfile, users } from '../data/userData';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Function to check authentication status on app load
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      
+      if (token && storedUser) {
+        // Validate token and user data
+        const foundUser = users.interviewers.find(i => i.email === storedUser.email) || 
+                         users.candidates.find(c => c.email === storedUser.email);
+        
+        if (foundUser) {
+          // Remove sensitive data
+          const { password, ...safeUser } = foundUser;
+          setUser(safeUser);
+          setIsAuthenticated(true);
+        } else {
+          // If user not found, clear storage
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const login = async (credentials) => {
     try {
-      setLoading(true);
-      setError(null);
+      // Find user in your data
+      const foundUser = users.interviewers.find(i => i.email === credentials.email && i.password === credentials.password) ||
+                       users.candidates.find(c => c.email === credentials.email && c.password === credentials.password);
 
-      const validatedUser = validateCredentials(credentials.email, credentials.password);
-      
-      if (validatedUser) {
-        // Get user's interviews
-        const userInterviews = getUserInterviews(validatedUser.id, validatedUser.role);
+      if (foundUser) {
+        // Remove sensitive data
+        const { password, ...safeUser } = foundUser;
         
-        // Set user data with interviews
-        setUser({ ...validatedUser, interviews: userInterviews });
-        setIsAuthenticated(true);
-        
-        // Store minimal data in localStorage
+        // Store auth data
         localStorage.setItem('token', 'mock-jwt-token');
-        localStorage.setItem('userId', validatedUser.id);
-        localStorage.setItem('userRole', validatedUser.role);
+        localStorage.setItem('user', JSON.stringify(safeUser));
         
-        return { success: true, user: validatedUser };
+        setUser(safeUser);
+        setIsAuthenticated(true);
+        return { success: true, user: safeUser };
       }
       
       throw new Error('Invalid credentials');
     } catch (error) {
-      setError(error.message);
+      console.error('Login error:', error);
       return { success: false, error: error.message };
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -45,31 +72,21 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userRole');
-  };
-
-  // Check authentication status on mount
-  const checkAuth = async () => {
-    const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
-    const userRole = localStorage.getItem('userRole');
-
-    if (token && userId && userRole) {
-      const userProfile = getUserProfile(parseInt(userId), userRole);
-      if (userProfile) {
-        const userInterviews = getUserInterviews(parseInt(userId), userRole);
-        setUser({ ...userProfile, interviews: userInterviews });
-        setIsAuthenticated(true);
-      } else {
-        logout();
-      }
-    }
+    localStorage.removeItem('user');
   };
 
   // Helper functions for role checking
   const isInterviewer = () => user?.role === 'interviewer';
   const isCandidate = () => user?.role === 'candidate';
+
+  // Show loading spinner while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{
@@ -79,7 +96,7 @@ export const AuthProvider = ({ children }) => {
       error,
       login,
       logout,
-      checkAuth,
+      checkAuthStatus,
       isInterviewer,
       isCandidate
     }}>
