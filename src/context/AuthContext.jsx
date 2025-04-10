@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { validateCredentials, getUserInterviews, getUserProfile, users } from '../data/userData';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../config/axios';
 
 const AuthContext = createContext(null);
 
@@ -8,35 +9,35 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   // Function to check authentication status on app load
   useEffect(() => {
-    checkAuthStatus();
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchUserProfile(token);
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const checkAuthStatus = async () => {
+  const fetchUserProfile = async (token) => {
     try {
-      const token = localStorage.getItem('token');
-      const storedUser = JSON.parse(localStorage.getItem('user'));
-      
-      if (token && storedUser) {
-        // Validate token and user data
-        const foundUser = users.interviewers.find(i => i.email === storedUser.email) || 
-                         users.candidates.find(c => c.email === storedUser.email);
-        
-        if (foundUser) {
-          // Remove sensitive data
-          const { password, ...safeUser } = foundUser;
-          setUser(safeUser);
-          setIsAuthenticated(true);
-        } else {
-          // If user not found, clear storage
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
+      const response = await api.get('/api/auth/me');
+
+      if (response.data.success) {
+        setUser(response.data.data);
+        setIsAuthenticated(true);
+      } else {
+        localStorage.removeItem('token');
+        setUser(null);
+        setIsAuthenticated(false);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('Error fetching user profile:', error);
+      localStorage.removeItem('token');
+      setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
@@ -44,40 +45,52 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      // Find user in your data
-      const foundUser = users.interviewers.find(i => i.email === credentials.email && i.password === credentials.password) ||
-                       users.candidates.find(c => c.email === credentials.email && c.password === credentials.password);
+      console.log('Login request data:', credentials);
+      const response = await api.post('/api/auth/login', credentials);
+      console.log('Login response:', response.data);
 
-      if (foundUser) {
-        // Remove sensitive data
-        const { password, ...safeUser } = foundUser;
-        
-        // Store auth data
-        localStorage.setItem('token', 'mock-jwt-token');
-        localStorage.setItem('user', JSON.stringify(safeUser));
-        
-        setUser(safeUser);
+      if (response.data.success) {
+        const { token, data } = response.data;
+        localStorage.setItem('token', token);
+        setUser(data);
         setIsAuthenticated(true);
-        return { success: true, user: safeUser };
+        
+        // Redirect based on role
+        if (data.role === 'interviewer') {
+          navigate('/interviewer/dashboard');
+        } else if (data.role === 'candidate') {
+          navigate('/candidate/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+        
+        return { success: true };
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Login failed'
+        };
       }
-      
-      throw new Error('Invalid credentials');
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: error.message };
+      console.error('Error response:', error.response?.data);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Login failed'
+      };
     }
   };
 
   const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    try {
+      localStorage.removeItem('token');
+      setUser(null);
+      setIsAuthenticated(false);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
-
-  // Helper functions for role checking
-  const isInterviewer = () => user?.role === 'interviewer';
-  const isCandidate = () => user?.role === 'candidate';
 
   // Show loading spinner while checking auth status
   if (loading) {
@@ -89,17 +102,18 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated,
-      loading,
-      error,
-      login,
-      logout,
-      checkAuthStatus,
-      isInterviewer,
-      isCandidate
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        loading,
+        error,
+        login,
+        logout,
+        isInterviewer: user?.role === 'interviewer',
+        isCandidate: user?.role === 'candidate',
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

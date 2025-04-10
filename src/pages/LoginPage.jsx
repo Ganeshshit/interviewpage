@@ -1,26 +1,27 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
-import { Label } from '../components/ui/label';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [credentials, setCredentials] = useState({
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setCredentials((prev) => ({ ...prev, [name]: value }));
-    // Clear error when user types
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -33,49 +34,75 @@ export default function LoginPage() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!credentials.email) {
+    if (!formData.email) {
       newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(credentials.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid";
     }
 
-    if (!credentials.password) {
+    if (!formData.password) {
       newErrors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    
-    setIsLoading(true);
-    try {
-      const result = await login(credentials);
-      if (result.success) {
-        // Redirect based on user role
-        if (result.user.role === 'interviewer') {
-          navigate('/interviewer/dashboard');
-        } else if (result.user.role === 'candidate') {
-          navigate('/dashboard');
-        } else {
-          throw new Error('Invalid user role');
-        }
-      } else {
-        throw new Error(result.error || 'Login failed');
-      }
-    } catch (err) {
-      setErrors(prev => ({ 
-        ...prev, 
-        form: err.message || 'Login failed. Please check your credentials.' 
-      }));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
+  if (!validateForm()) {
+    return;
+  }
+
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    const result = await login({
+      email: formData.email.trim(),
+      password: formData.password,
+    });
+
+    if (result.success) {
+      toast.success("Login successful!");
+
+      // Assuming the result contains user role
+      const userRole = result.user?.role;
+
+      // Redirect based on role
+      if (userRole === "admin") {
+        navigate("/admin/dashboard");
+      } else if (userRole === "interviewer") {
+        navigate("/interviewer/dashboard");
+      } else if (userRole === "candidate") {
+        navigate("/candidate/dashboard");
+      } else {
+        navigate("/dashboard"); // Default fallback
+      }
+    } else {
+      setError(result.error || "Login failed. Please try again.");
+      toast.error(result.error || "Login failed");
+    }
+  } catch (error) {
+    console.error("Login error:", error);
+    if (error.response?.data?.errors) {
+      const validationErrors = {};
+      error.response.data.errors.forEach((err) => {
+        validationErrors[err.param] = err.msg;
+      });
+      setErrors(validationErrors);
+      toast.error("Please check your input");
+    } else {
+      setError("An unexpected error occurred. Please try again.");
+      toast.error("Login failed. Please try again.");
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-0">
       <div className="w-full max-w-md">
@@ -98,7 +125,7 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   placeholder="name@example.com"
-                  value={credentials.email}
+                  value={formData.email}
                   autoComplete="off"
                   onChange={handleChange}
                   className={errors.email ? "border-red-500" : ""}
@@ -116,17 +143,15 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
-                  value={credentials.password}
+                  value={formData.password}
                   onChange={handleChange}
                   placeholder="******"
                   className={errors.password ? "border-red-500" : ""}
                 />
                 {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               </div>
-              {errors.form && (
-                <div className="bg-red-50 dark:bg-red-900/20 text-red-500 p-3 rounded-md text-sm">
-                  {errors.form}
-                </div>
+              {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 text-red-500 p-3 rounded-md text-sm">{error}</div>
               )}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
