@@ -31,7 +31,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { webrtcService } from "../services/webrtc";
 import CodeEditor from "../components/CodeEditor";
 import { useAuth } from "../context/AuthContext";
-import { codingQuestions } from "../data/codingquestions";
+import { codingQuestions } from "../data/codingQuestions";
 import VideoCall from "../components/VideoCall";
 import ChatBox from "../components/ChatBox";
 import QuestionSection from "../components/QuestionSection";
