@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import axios from 'axios';
+import api from '../services/api';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -94,7 +94,7 @@ export default function RegisterPage() {
       };
       delete userData.confirmPassword;
 
-      const response = await axios.post('http://localhost:5000/api/auth/register', userData);
+      const response = await api.post('/auth/register', userData);
       console.log('Registration successful:', response.data);
       
       // Store token and user data
