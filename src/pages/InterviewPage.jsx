@@ -1,707 +1,8 @@
-// "use client"
-
-// import React, { useRef, useEffect, useState, useCallback } from "react"
-// import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom"
-// import DashboardLayout from "../components/DashboardLayout"
-// import CodeEditor from "../components/CodeEditor"
-// import { useAuth } from "../context/AuthContext"
-// import { toast } from 'react-hot-toast'
-// import { Video, Mic, MicOff, VideoOff, MessageSquare, Send, X, Share2, Monitor } from 'lucide-react'
-// import { api } from '../config/axios'
-// import webrtcService from '../services/webrtc'
-
-// const InterviewPage = () => {
-//   const { interviewId } = useParams()
-//   const navigate = useNavigate()
-//   const [searchParams] = useSearchParams()
-//   const { user, isAuthenticated, isCandidate } = useAuth()
-//   const role = searchParams.get('role')
-
-//   // State management
-//   const [isConnecting, setIsConnecting] = useState(true)
-//   const [isConnected, setIsConnected] = useState(false)
-//   const [isMuted, setIsMuted] = useState(false)
-//   const [isVideoOff, setIsVideoOff] = useState(false)
-//   const [isScreenSharing, setIsScreenSharing] = useState(false)
-//   const [messages, setMessages] = useState([])
-//   const [newMessage, setNewMessage] = useState("")
-//   const [code, setCode] = useState("")
-//   const [language, setLanguage] = useState("javascript")
-//   const [error, setError] = useState(null)
-//   const [connectionStatus, setConnectionStatus] = useState('disconnected')
-
-//   // Refs
-//   const localVideoRef = useRef(null)
-//   const remoteVideoRef = useRef(null)
-//   const messagesEndRef = useRef(null)
-
-//   // Check authentication and role
-//   useEffect(() => {
-//     if (!isAuthenticated) {
-//       navigate('/login')
-//       return
-//     }
-
-//     if (!user?._id) {
-//       setError('User ID not found. Please log in again.')
-//       return
-//     }
-
-//     if (!role && !isCandidate) {
-//       setError('Invalid role. Please specify your role.')
-//       return
-//     }
-//   }, [isAuthenticated, user, role, isCandidate, navigate])
-
-//   const initializeConnection = useCallback(async () => {
-//     try {
-//       setIsConnecting(true);
-//       setError(null);
-
-//       // Initialize WebRTC service
-//       await webrtcService.initialize(interviewId, true);
-
-//       // Set up stream callback
-//       webrtcService.onStream((stream) => {
-//         if (remoteVideoRef.current) {
-//           remoteVideoRef.current.srcObject = stream;
-//         }
-//       });
-
-//       // Set up message callback
-//       webrtcService.onMessage((message) => {
-//         setMessages(prev => [...prev, message]);
-//       });
-
-//       // Start the call
-//       const localStream = await webrtcService.startCall();
-//       if (localVideoRef.current) {
-//         localVideoRef.current.srcObject = localStream;
-//       }
-
-//       // Set up connection state change handler
-//       webrtcService.peerConnection.onconnectionstatechange = () => {
-//         setConnectionStatus(webrtcService.peerConnection.connectionState);
-//       };
-
-//       setIsConnecting(false);
-//     } catch (error) {
-//       console.error('Connection error:', error);
-//       setError(error.message || 'Failed to establish connection');
-//       setIsConnecting(false);
-//       toast.error('Failed to establish connection. Please try again.');
-//     }
-//   }, [interviewId]);
-
-//   // Initialize connection when component mounts
-//   useEffect(() => {
-//     if (user && interviewId && role) {
-//       initializeConnection();
-//     }
-//   }, [user, interviewId, role, initializeConnection]);
-
-//   // Cleanup on unmount
-//   useEffect(() => {
-//     return () => {
-//       if (webrtcService) {
-//         webrtcService.cleanup();
-//       }
-//     };
-//   }, []);
-
-//   // Handle media controls
-//   const toggleAudio = useCallback(() => {
-//     const enabled = webrtcService.toggleAudio()
-//     setIsMuted(!enabled)
-//   }, [])
-
-//   const toggleVideo = useCallback(() => {
-//     const enabled = webrtcService.toggleVideo()
-//     setIsVideoOff(!enabled)
-//   }, [])
-
-//   const toggleScreenShare = useCallback(async () => {
-//     try {
-//       if (!isScreenSharing) {
-//         const screenStream = await webrtcService.startScreenShare()
-//         if (localVideoRef.current) {
-//           localVideoRef.current.srcObject = screenStream
-//         }
-//         setIsScreenSharing(true)
-//       } else {
-//         await webrtcService.stopScreenShare()
-//         if (localVideoRef.current) {
-//           localVideoRef.current.srcObject = webrtcService.getLocalStream()
-//         }
-//         setIsScreenSharing(false)
-//       }
-//     } catch (error) {
-//       console.error('Screen share error:', error)
-//       toast.error('Failed to toggle screen sharing')
-//     }
-//   }, [isScreenSharing])
-
-//   // Handle chat
-//   const sendMessage = useCallback((e) => {
-//     e.preventDefault()
-//     if (!newMessage.trim()) return
-
-//     const messageData = {
-//         content: newMessage,
-//       sender: user._id,
-//       timestamp: new Date().toISOString()
-//     }
-
-//     webrtcService.socket?.emit('chat-message', {
-//       roomId: interviewId,
-//       message: messageData
-//     })
-
-//     setMessages(prev => [...prev, messageData])
-//       setNewMessage("")
-//   }, [newMessage, user._id, interviewId])
-
-//   // Handle code updates
-//   const handleCodeChange = useCallback((newCode) => {
-//     setCode(newCode)
-//     webrtcService.socket?.emit('code-update', {
-//       roomId: interviewId,
-//           code: newCode,
-//       language
-//     })
-//   }, [interviewId, language])
-
-//   // Handle leaving interview
-//   const handleLeaveInterview = useCallback(async () => {
-//     try {
-//       await api.post(`/api/interviews/${interviewId}/leave`)
-//       if (webrtcService) {
-//         webrtcService.cleanup()
-//       }
-//       window.close()
-//     } catch (error) {
-//       console.error('Error leaving interview:', error)
-//       toast.error(error.response?.data?.message || 'Failed to leave interview')
-//     }
-//   }, [interviewId])
-
-//   // Show error state
-//   if (error) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-//         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-//           <h2 className="text-2xl font-semibold text-red-600 mb-4">Connection Error</h2>
-//           <p className="text-gray-600 mb-6">{error}</p>
-//           <div className="flex justify-between">
-//             <button
-//               onClick={() => window.location.reload()}
-//               className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-//             >
-//               Try Again
-//             </button>
-//             <button
-//               onClick={() => window.close()}
-//               className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
-//             >
-//               Close Window
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//     )
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-gray-100">
-//       <div className="container mx-auto p-4">
-//         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-//           {/* Video Section */}
-//           <div className="lg:col-span-2 space-y-4">
-//             <div className="bg-white rounded-lg shadow-md p-4">
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 {/* Local Video */}
-//                 <div className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden">
-//                   <video
-//                     ref={localVideoRef}
-//                     autoPlay
-//                     muted
-//                     playsInline
-//                     className="w-full h-full object-cover"
-//                   />
-//                   <div className="absolute bottom-2 left-2 flex space-x-2">
-//                     <button
-//                       onClick={toggleAudio}
-//                       className="p-2 bg-gray-800 bg-opacity-50 rounded-full text-white hover:bg-opacity-75"
-//                     >
-//                       {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-//                     </button>
-//                     <button
-//                       onClick={toggleVideo}
-//                       className="p-2 bg-gray-800 bg-opacity-50 rounded-full text-white hover:bg-opacity-75"
-//                     >
-//                       {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
-//                     </button>
-//                   </div>
-//                 </div>
-
-//                 {/* Remote Video */}
-//                 <div className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden">
-//                   <video
-//                     ref={remoteVideoRef}
-//                     autoPlay
-//                     playsInline
-//                     className="w-full h-full object-cover"
-//                   />
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* Screen Share Button */}
-//             <div className="flex justify-center">
-//               <button
-//                 onClick={toggleScreenShare}
-//                 className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-//               >
-//                 {isScreenSharing ? (
-//                   <>
-//                     <Monitor size={20} />
-//                     <span>Stop Sharing</span>
-//                   </>
-//                 ) : (
-//                   <>
-//                     <Share2 size={20} />
-//                     <span>Share Screen</span>
-//                   </>
-//                 )}
-//               </button>
-//             </div>
-//           </div>
-
-//           {/* Right Sidebar */}
-//           <div className="space-y-4">
-//             {/* Chat Section */}
-//             <div className="bg-white rounded-lg shadow-md p-4 h-[300px] flex flex-col">
-//               <div className="flex items-center justify-between mb-4">
-//                 <h3 className="text-lg font-semibold">Chat</h3>
-//                 <MessageSquare size={20} />
-//               </div>
-//               <div className="flex-1 overflow-y-auto mb-4 space-y-2">
-//                 {messages.map((message, index) => (
-//                   <div
-//                     key={index}
-//                     className={`p-2 rounded-lg ${
-//                       message.sender === user._id
-//                         ? 'bg-indigo-100 ml-auto'
-//                         : 'bg-gray-100'
-//                     }`}
-//                   >
-//                     <p className="text-sm">{message.content}</p>
-//                     <span className="text-xs text-gray-500">
-//                       {new Date(message.timestamp).toLocaleTimeString()}
-//                     </span>
-//                   </div>
-//                 ))}
-//                 <div ref={messagesEndRef} />
-//               </div>
-//               <form onSubmit={sendMessage} className="flex space-x-2">
-//                 <input
-//                   type="text"
-//                   value={newMessage}
-//                   onChange={(e) => setNewMessage(e.target.value)}
-//                   placeholder="Type a message..."
-//                   className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//                 />
-//                 <button
-//                   type="submit"
-//                   className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-//                 >
-//                   <Send size={20} />
-//                 </button>
-//               </form>
-//             </div>
-
-//             {/* Code Editor Section (for candidates) */}
-//             {role === 'candidate' && (
-//               <div className="bg-white rounded-lg shadow-md p-4">
-//                 <div className="flex items-center justify-between mb-4">
-//                   <h3 className="text-lg font-semibold">Code Editor</h3>
-//                   <select
-//                     value={language}
-//                     onChange={(e) => setLanguage(e.target.value)}
-//                     className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-//                   >
-//                     <option value="javascript">JavaScript</option>
-//                     <option value="python">Python</option>
-//                     <option value="java">Java</option>
-//                     <option value="cpp">C++</option>
-//                   </select>
-//                 </div>
-//                 <CodeEditor
-//                   value={code}
-//                   onChange={handleCodeChange}
-//                   language={language}
-//                   height="300px"
-//                 />
-//               </div>
-//             )}
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
-
-// export default InterviewPage
-// "use client";
-
-// import React, { useRef, useEffect, useState, useCallback } from "react";
-// import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-// import { toast } from "react-hot-toast";
-// import {
-//   Video,
-//   Mic,
-//   MicOff,
-//   VideoOff,
-//   Send,
-//   X,
-//   Monitor,
-//   User,
-//   MessageSquare,
-// } from "lucide-react";
-// import axios from "axios";
-// import webrtcService from "../services/webrtc";
-// import CodeEditor from "../components/CodeEditor";
-// import { useAuth } from "../context/AuthContext";
-// import { codingQuestions } from "../data/codingquestions";
-
-// const InterviewPage = () => {
-//   const { interviewId } = useParams();
-//   const navigate = useNavigate();
-//   const [searchParams] = useSearchParams();
-//   const { user, isAuthenticated, isCandidate } = useAuth();
-//   const role = searchParams.get("role");
-
-//   const [isConnecting, setIsConnecting] = useState(true);
-//   const [isMuted, setIsMuted] = useState(false);
-//   const [isVideoOff, setIsVideoOff] = useState(false);
-//   const [isScreenSharing, setIsScreenSharing] = useState(false);
-//   const [isChatOpen, setIsChatOpen] = useState(false);
-//   const [messages, setMessages] = useState([]);
-//   const [newMessage, setNewMessage] = useState("");
-//   const [code, setCode] = useState("");
-//   const [language, setLanguage] = useState("javascript");
-//   const [error, setError] = useState(null);
-//   const [connectionStatus, setConnectionStatus] = useState("disconnected");
-//   const [selectedQuestion, setSelectedQuestion] = useState(null);
-
-//   const localVideoRef = useRef(null);
-//   const remoteVideoRef = useRef(null);
-//   const messagesEndRef = useRef(null);
-
-//   useEffect(() => {
-//     if (!isAuthenticated) {
-//       navigate("/login");
-//       return;
-//     }
-//     if (!user?._id) {
-//       setError("User ID not found. Please log in again.");
-//       return;
-//     }
-//     if (!role && !isCandidate) {
-//       setError("Invalid role. Please specify your role.");
-//       return;
-//     }
-//   }, [isAuthenticated, user, role, isCandidate, navigate]);
-
-//   const initializeConnection = useCallback(async () => {
-//     try {
-//       setIsConnecting(true);
-//       setError(null);
-//       console.log(user._id, user.role, interviewId);
-//       await webrtcService.initialize(interviewId, user._id, user.role, true);
-//       webrtcService.onStream((stream) => {
-//         if (remoteVideoRef.current) {
-//           remoteVideoRef.current.srcObject = stream;
-//         }
-//       });
-//       webrtcService.onMessage((message) => {
-//         setMessages((prev) => [...prev, message]);
-//       });
-//       const localStream = await webrtcService.startCall();
-//       if (localVideoRef.current) {
-//         localVideoRef.current.srcObject = localStream;
-//       }
-//       webrtcService.peerConnection.onconnectionstatechange = () => {
-//         setConnectionStatus(webrtcService.peerConnection.connectionState);
-//       };
-//       setIsConnecting(false);
-//     } catch (error) {
-//       console.error("Connection error:", error);
-//       setError(error.message || "Failed to establish connection");
-//       setIsConnecting(false);
-//       toast.error("Failed to establish connection. Please try again.");
-//     }
-//   }, [interviewId]);
-
-//   useEffect(() => {
-//     if (user && interviewId && role) {
-//       initializeConnection();
-//     }
-//   }, [user, interviewId, role, initializeConnection]);
-
-//   useEffect(() => {
-//     return () => {
-//       if (webrtcService) {
-//         webrtcService.cleanup();
-//       }
-//     };
-//   }, []);
-
-//   const toggleAudio = useCallback(() => {
-//     const enabled = webrtcService.toggleAudio();
-//     setIsMuted(!enabled);
-//   }, []);
-
-//   const toggleVideo = useCallback(() => {
-//     const enabled = webrtcService.toggleVideo();
-//     setIsVideoOff(!enabled);
-//   }, []);
-
-//   const toggleScreenShare = useCallback(async () => {
-//     try {
-//       if (!isScreenSharing) {
-//         const screenStream = await webrtcService.startScreenShare();
-//         if (localVideoRef.current) {
-//           localVideoRef.current.srcObject = screenStream;
-//         }
-//         setIsScreenSharing(true);
-//       } else {
-//         await webrtcService.stopScreenShare();
-//         if (localVideoRef.current) {
-//           localVideoRef.current.srcObject = webrtcService.getLocalStream();
-//         }
-//         setIsScreenSharing(false);
-//       }
-//     } catch (error) {
-//       console.error("Screen share error:", error);
-//       toast.error("Failed to toggle screen sharing");
-//     }
-//   }, [isScreenSharing]);
-
-//   const sendMessage = useCallback(
-//     (e) => {
-//       e.preventDefault();
-//       if (!newMessage.trim()) return;
-
-//       const messageData = {
-//         content: newMessage,
-//         sender: user._id,
-//         timestamp: new Date().toISOString(),
-//       };
-
-//       webrtcService.socket?.emit("chat-message", {
-//         roomId: interviewId,
-//         message: messageData,
-//       });
-
-//       setMessages((prev) => [...prev, messageData]);
-//       setNewMessage("");
-//     },
-//     [newMessage, user._id, interviewId]
-//   );
-
-//   const handleCodeChange = useCallback(
-//     (newCode) => {
-//       setCode(newCode);
-//       webrtcService.socket?.emit("code-update", {
-//         roomId: interviewId,
-//         code: newCode,
-//         language,
-//       });
-//     },
-//     [interviewId, language]
-//   );
-
-//   const handleLeaveInterview = useCallback(async () => {
-//     try {
-//       await axios.post(`/api/interviews/${interviewId}/leave`);
-//       if (webrtcService) {
-//         webrtcService.cleanup();
-//       }
-//       navigate("/dashboard");
-//     } catch (error) {
-//       console.error("Error leaving interview:", error);
-//       toast.error(error.response?.data?.message || "Failed to leave interview");
-//     }
-//   }, [interviewId, navigate]);
-
-//   const handleQuestionClick = (question) => {
-//     setSelectedQuestion(question);
-//     setCode(question.starterCode);
-//     setLanguage("javascript"); // Update this if the language is different
-//   };
-
-//   if (error) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-//         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-//           <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-//           <p className="text-gray-700">{error}</p>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-blue-200 p-0 flex flex-col">
-//   {/* Main Content Layout */}
-//   <div className="flex flex-1 w-full">
-    
-//     {/* Left Panel for Candidate */}
-//     {user.role === "candidate" && (
-//       <div className="w-1/4 space-y-4">
-//         <div className="bg-white p-4 rounded-xl shadow-lg overflow-y-auto max-h-full">
-//           <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-//             Interview Questions
-//           </h2>
-//           <ul className="list-disc list-inside text-gray-700 space-y-2">
-//             {codingQuestions.map((question, index) => (
-//               <li
-//                 key={index}
-//                 onClick={() => handleQuestionClick(question)}
-//                 className="cursor-pointer hover:bg-gray-200 p-2 rounded"
-//               >
-//                 {question.title}
-//               </li>
-//             ))}
-//           </ul>
-//           {selectedQuestion && (
-//             <div className="mt-4 p-4 bg-gray-100 rounded-lg">
-//               <h3 className="text-xl font-semibold text-gray-800 mb-2">
-//                 {selectedQuestion.title} ({selectedQuestion.difficulty})
-//               </h3>
-//               <p className="text-gray-700 mb-4">{selectedQuestion.description}</p>
-//               <h4 className="text-lg font-semibold text-gray-800">Examples:</h4>
-//               <ul className="list-disc list-inside text-gray-700 space-y-2">
-//                 {selectedQuestion.examples.map((example, index) => (
-//                   <li key={index}>
-//                     <strong>Input:</strong> {example.input}<br />
-//                     <strong>Output:</strong> {example.output}<br />
-//                     <strong>Explanation:</strong> {example.explanation}
-//                   </li>
-//                 ))}
-//               </ul>
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//     )}
-
-//     {/* Center Panel */}
-//     <div className="flex-1 flex flex-col items-center space-y-4">
-//       {user.role === "candidate" && (
-//         <div className="w-full h-[90vh] bg-white rounded-xl shadow-lg p-4">
-//           <CodeEditor
-//             value={code}
-//             onChange={handleCodeChange}
-//             language={language}
-//           />
-//         </div>
-//       )}
-
-//       {user.role === "interviewer" && (
-//         <div className="w-full h-[90vh] bg-white rounded-xl shadow-lg p-4 flex items-center justify-center text-gray-500">
-//           <p className="text-lg font-medium">You are viewing the candidate's screen...</p>
-//         </div>
-//       )}
-//     </div>
-
-//     {/* Right Panel for Videos */}
-//     <div className="w-1/6 space-y-4">
-//       <div className="flex flex-col space-y-4">
-//         {[localVideoRef, remoteVideoRef].map((ref, idx) => (
-//           <div
-//             key={idx}
-//             className="relative w-full h-32 rounded-xl shadow-md bg-black flex items-center justify-center overflow-hidden"
-//           >
-//             <video
-//               ref={ref}
-//               autoPlay
-//               muted={idx === 0}
-//               className="w-full h-full object-cover"
-//             />
-//             {!ref.current?.srcObject && (
-//               <div className="absolute text-white opacity-70">
-//                 <User size={48} />
-//               </div>
-//             )}
-//           </div>
-//         ))}
-//       </div>
-//     </div>
-//   </div>
-
-//   {/* Bottom Control Buttons */}
-//   <div className="flex justify-center gap-4 mt-2 mb-2">
-//     {[
-//       [toggleAudio, isMuted ? <MicOff /> : <Mic />],
-//       [toggleVideo, isVideoOff ? <VideoOff /> : <Video />],
-//       [toggleScreenShare, <Monitor />],
-//       [() => setIsChatOpen((prev) => !prev), <MessageSquare />],
-//       [handleLeaveInterview, <X />],
-//     ].map(([onClick, icon], idx) => (
-//       <button
-//         key={idx}
-//         onClick={onClick}
-//         className={`p-3 rounded-full shadow-md transition duration-200 ${
-//           idx === 4
-//             ? "bg-red-500 text-white hover:bg-red-600"
-//             : "bg-white text-gray-700 hover:bg-gray-100"
-//         }`}
-//       >
-//         {icon}
-//       </button>
-//     ))}
-//   </div>
-
-//   {/* Chat Popup */}
-//   {isChatOpen && (
-//     <div className="fixed bottom-6 right-6 w-80 h-96 bg-white rounded-xl shadow-xl p-4 flex flex-col z-50 border border-gray-200">
-//       <div className="flex-1 overflow-y-auto border-b pb-2 mb-2">
-//         {messages.map((msg, idx) => (
-//           <div key={idx} className="text-sm mb-1">
-//             <span className="font-semibold text-gray-800">{msg.sender}</span>: {msg.content}
-//           </div>
-//         ))}
-//         <div ref={messagesEndRef} />
-//       </div>
-//       <form onSubmit={sendMessage} className="flex mt-2">
-//         <input
-//           type="text"
-//           value={newMessage}
-//           onChange={(e) => setNewMessage(e.target.value)}
-//           className="flex-grow p-2 border rounded-l focus:outline-none focus:ring-2 focus:ring-blue-400"
-//           placeholder="Type a message"
-//         />
-//         <button
-//           type="submit"
-//           className="bg-blue-500 text-white px-4 rounded-r hover:bg-blue-600"
-//         >
-//           <Send size={16} />
-//         </button>
-//       </form>
-//     </div>
-//   )}
-// </div>
-//   )
-// };
-
-// export default InterviewPage;
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast";
 import {
   Video,
   Mic,
@@ -712,21 +13,55 @@ import {
   Monitor,
   User,
   MessageSquare,
+  Settings,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  ChevronRight,
+  Code2,
+  Layout,
+  Maximize2,
+  Minimize2,
+  PhoneOff,
 } from "lucide-react";
+import ChatPanel from '../components/ChatPanel';
 import axios from "axios";
-import webrtcService from "../services/webrtc";
+import { motion, AnimatePresence } from "framer-motion";
+import { webrtcService } from "../services/webrtc";
 import CodeEditor from "../components/CodeEditor";
 import { useAuth } from "../context/AuthContext";
 import { codingQuestions } from "../data/codingquestions";
+import VideoCall from "../components/VideoCall";
+import ChatBox from "../components/ChatBox";
+import QuestionSection from "../components/QuestionSection";
+import api from '../services/api';
 
 const InterviewPage = () => {
   const { interviewId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isAuthenticated, isCandidate } = useAuth();
+  const { user, isAuthenticated, isCandidate, loading: authLoading } = useAuth();
   const role = searchParams.get("role");
+  const userId = user?._id;
 
-  const [isConnecting, setIsConnecting] = useState(true);
+  // UI State
+  const [theme, setTheme] = useState("light");
+  const [layout, setLayout] = useState("default");
+  const [showSettings, setShowSettings] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  // Connection State
+  const [isJoined, setIsJoined] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(true);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isWebRTCInitialized, setIsWebRTCInitialized] = useState(false);
+  const [connectionQuality, setConnectionQuality] = useState("good");
+  const [networkStats, setNetworkStats] = useState({
+    bitrate: 0,
+    packetLoss: 0,
+    latency: 0
+  });
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -738,11 +73,27 @@ const InterviewPage = () => {
   const [error, setError] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [otherUserJoined, setOtherUserJoined] = useState(false);
+  const [otherUserInfo, setOtherUserInfo] = useState(null);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+  const [currentRoomId, setCurrentRoomId] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [otherUser, setOtherUser] = useState(null);
+  const [interview, setInterview] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const initializedRef = useRef(false);
+  const joinSoundRef = useRef(new Audio('/sounds/join.mp3'));
+  const waitingSoundRef = useRef(new Audio('/sounds/waiting.mp3'));
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const screenShareRef = useRef(null);
 
+  const [openQuestionId, setOpenQuestionId] = useState(null);
+
+  // Authentication check
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
@@ -756,76 +107,163 @@ const InterviewPage = () => {
       setError("Invalid role. Please specify your role.");
       return;
     }
-  }, [isAuthenticated, user, role, isCandidate, navigate]);
 
-const initializeConnection = useCallback(async () => {
-try {
-  setIsConnecting(true);
-  setError(null);
-
-  // Initialize WebRTC
-  const res = await webrtcService.initialize(
-    interviewId,
-    user._id,
-    user.role,
-    true
-  );
-  console.log(res);
-
-  // Handle incoming stream and messages
-  webrtcService.onStream((stream) => {
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = stream;
+    // If we have all required data, initialize the interview
+    if (user?._id && interviewId && role) {
+      handleJoinInterview();
     }
+  }, [isAuthenticated, user, role, isCandidate, navigate, interviewId]);
+
+  useEffect(() => {
+    if (!user || !userId) {
+      navigate('/login');
+      return;
+    }
+
+    // Only set up event handlers once
+    if (!initializedRef.current) {
+  webrtcService.onStream((stream) => {
+        setRemoteStream(stream);
   });
 
   webrtcService.onMessage((message) => {
     setMessages((prev) => [...prev, message]);
   });
 
-  // Monitor connection state changes
-  webrtcService.peerConnection.onconnectionstatechange = () => {
-    const state = webrtcService.peerConnection.connectionState;
-    console.log("🌀 Connection state changed:", state);
-    setConnectionStatus(state);
+      webrtcService.onUserJoined((userInfo) => {
+        setOtherUser(userInfo);
+        setIsWaiting(false);
+        // Play join sound
+        joinSoundRef.current.play().catch(console.error);
+        toast.success(`${userInfo.role} has joined the interview`);
+      });
+
+      webrtcService.onUserLeft((userInfo) => {
+        setOtherUser(null);
+        setIsWaiting(true);
+        // Play waiting sound
+        waitingSoundRef.current.play().catch(console.error);
+        toast.info(`${userInfo.role} has left the interview`);
+      });
+
+      initializedRef.current = true;
+    }
+
+    return () => {
+      webrtcService.cleanup();
+      initializedRef.current = false;
+    };
+  }, [user, userId, navigate]);
+
+  // Video initialization is now handled by VideoCall component
+
+  const handleJoinInterview = useCallback(async () => {
+    if (!interviewId || !userId || !role) {
+      const error = "Missing required parameters to join the interview";
+      console.error(error, { interviewId, userId, role });
+      setError(error);
+      toast.error(error);
+      return;
+    }
+
+    try {
+      setIsJoining(true);
+      setError(null);
+      
+      console.log("Initializing WebRTC service with:", { interviewId, userId, role });
+      
+      // Initialize WebRTC service with proper parameters
+      try {
+        await webrtcService.initialize(interviewId, userId, role);
+      } catch (error) {
+        throw new Error(`Failed to initialize WebRTC service: ${error.message}`);
+      }
+      
+      // Set up event handlers
+      webrtcService.onStream((stream) => {
+        if (stream) {
+          console.log("Received remote stream");
+          setRemoteStream(stream);
+        }
+      });
+      
+      webrtcService.onUserJoined((user) => {
+        if (user) {
+          console.log("User joined:", user);
+          setOtherUserJoined(true);
+          setOtherUserInfo(user);
+          toast.success(`${user.role === 'interviewer' ? 'Interviewer' : 'Candidate'} has joined the interview`);
+        }
+      });
+      
+      webrtcService.onUserLeft((user) => {
+        if (user) {
+          console.log("User left:", user);
+          setOtherUserJoined(false);
+          toast.info(`${user.role === 'interviewer' ? 'Interviewer' : 'Candidate'} has left the interview`);
+        }
+      });
+      
+      // Get local stream
+      const localStream = await webrtcService.getLocalStream();
+      if (localStream) {
+        localStreamRef.current = localStream;
+      }
+      
+      setIsJoined(true);
+      setIsWaiting(false);
+      toast.success("Successfully joined the interview");
+    } catch (error) {
+      console.error("Failed to join interview:", error);
+      setError(error.message || "Failed to join interview. Please try again.");
+      toast.error(error.message || "Failed to join interview. Please try again.");
+    } finally {
+      setIsJoining(false);
+    }
+  }, [interviewId, userId, role]);
+
+  const fetchInterviewDetails = async () => {
+    try {
+      const response = await axios.get(`/api/interviews/${interviewId}`);
+      setInterview(response.data);
+      
+      // If there's a selected question in the interview data, set it
+      if (response.data.selectedQuestion) {
+        setSelectedQuestion(response.data.selectedQuestion);
+        setCode(response.data.selectedQuestion.starterCode || '');
+      }
+    } catch (error) {
+      console.error('Error fetching interview details:', error);
+      throw new Error('Failed to fetch interview details');
+    }
   };
 
-  // Wait for signaling state to be stable and then start the call
-  if (webrtcService.peerConnection.signalingState === "stable") {
-    const localStream = await webrtcService.startCall();
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  } else {
-    console.warn(
-      "⏳ Skipping offer creation — signaling state:",
-      webrtcService.peerConnection.signalingState
-    );
-  }
+  const setupConnectionMonitoring = () => {
+    // Set up event listeners for WebRTC events
+    webrtcService.onStream((stream) => {
+      setRemoteStream(stream);
+    });
 
-  setIsConnecting(false);
-} catch (error2) {
-  console.error("❌ Connection error:", error2);
-  setError(error2.message || "Failed to establish connection");
-  setIsConnecting(false);
-  toast.error("Failed to establish connection. Please try again.");
-}
-}, [interviewId, user]);
+    webrtcService.onMessage((message) => {
+      setMessages(prev => [...prev, message]);
+    });
 
+    webrtcService.onUserJoined((userInfo) => {
+      setOtherUser(userInfo);
+      setIsWaiting(false);
+      // Play join sound
+      joinSoundRef.current.play().catch(console.error);
+      toast.success(`${userInfo.role} has joined the interview`);
+    });
 
-  useEffect(() => {
-    if (user && interviewId && role) {
-      initializeConnection();
-    }
-  }, [user, interviewId, role, initializeConnection]);
-
-  useEffect(() => {
-    return () => {
-      if (webrtcService) {
-        webrtcService.cleanup();
-      }
-    };
-  }, []);
+    webrtcService.onUserLeft((userInfo) => {
+      setOtherUser(null);
+      setIsWaiting(true);
+      // Play waiting sound
+      waitingSoundRef.current.play().catch(console.error);
+      toast.info(`${userInfo.role} has left the interview`);
+    });
+  };
 
   const toggleAudio = useCallback(() => {
     const enabled = webrtcService.toggleAudio();
@@ -837,7 +275,7 @@ try {
     setIsVideoOff(!enabled);
   }, []);
 
-  const toggleScreenShare = useCallback(async () => {
+  const toggleScreenShare = async () => {
     try {
       if (!isScreenSharing) {
         const screenStream = await webrtcService.startScreenShare();
@@ -845,18 +283,20 @@ try {
           localVideoRef.current.srcObject = screenStream;
         }
         setIsScreenSharing(true);
+        toast.success("Screen sharing started");
       } else {
         await webrtcService.stopScreenShare();
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = webrtcService.getLocalStream();
         }
         setIsScreenSharing(false);
+        toast.success("Screen sharing stopped");
       }
     } catch (error) {
       console.error("Screen share error:", error);
       toast.error("Failed to toggle screen sharing");
     }
-  }, [isScreenSharing]);
+  };
 
   const sendMessage = useCallback(
     (e) => {
@@ -892,9 +332,23 @@ try {
     [interviewId, language]
   );
 
+  const handleSendMessage = () => {
+    if (newMessage.trim()) {
+      setMessages([...messages, { text: newMessage, sender: user._id }]);
+      setNewMessage("");
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
+  const handleLanguageChange = (newLanguage) => {
+    setLanguage(newLanguage);
+  };
+
   const handleLeaveInterview = useCallback(async () => {
     try {
-      await axios.post(`/api/interviews/${interviewId}/leave`);
+      await api.post(`/interviews/${interviewId}/leave`);
       if (webrtcService) {
         webrtcService.cleanup();
       }
@@ -911,520 +365,498 @@ try {
     setLanguage("javascript");
   };
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-700">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  const handleStartVideoCall = async () => {
+    try {
+      const roomId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      setCurrentRoomId(roomId);
+      setShowVideoCall(true);
+      setIsWaiting(true);
+      setOtherUserJoined(false);
+    } catch (error) {
+      console.error("Failed to start video call:", error);
+      toast.error("Failed to start video call");
+    }
+  };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-blue-200 p-0 flex flex-col">
-      <div className="flex flex-1 w-full">
-        {user.role === "candidate" && (
-          <div className="w-1/4 space-y-4">
-            <div className="bg-white p-4 rounded-xl shadow-lg overflow-y-auto max-h-full">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-                Interview Questions
-              </h2>
-              <ul className="list-disc list-inside text-gray-700 space-y-2">
-                {codingQuestions.map((question, index) => (
-                  <li
-                    key={index}
-                    onClick={() => handleQuestionClick(question)}
-                    className="cursor-pointer hover:bg-gray-200 p-2 rounded"
-                  >
-                    {question.title}
-                  </li>
-                ))}
-              </ul>
-              {selectedQuestion && (
-                <div className="mt-4 p-4 bg-gray-100 rounded-lg">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                    {selectedQuestion.title} ({selectedQuestion.difficulty})
-                  </h3>
-                  <p className="text-gray-700 mb-4">
-                    {selectedQuestion.description}
-                  </p>
-                  <h4 className="text-lg font-semibold text-gray-800">
-                    Examples:
-                  </h4>
-                  <ul className="list-disc list-inside text-gray-700 space-y-2">
-                    {selectedQuestion.examples.map((example, index) => (
-                      <li key={index}>
-                        <strong>Input:</strong> {example.input}
-                        <br />
-                        <strong>Output:</strong> {example.output}
-                        <br />
-                        <strong>Explanation:</strong> {example.explanation}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+  // Add a useEffect to monitor connection status
+  useEffect(() => {
+    const checkConnectionStatus = () => {
+      if (webrtcService) {
+        setConnectionStatus(webrtcService.connectionStatus);
+        if (webrtcService.connectionError) {
+          setError(webrtcService.connectionError);
+        }
+      }
+    };
+    
+    const interval = setInterval(checkConnectionStatus, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const initializeWebRTC = async () => {
+      try {
+        if (!interviewId || !userId || !role) {
+          console.log('Missing required parameters');
+          return;
+        }
+
+        console.log('Initializing WebRTC service with:', { interviewId, userId, role });
+
+        // Request camera and microphone permissions first
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "user"
+          },
+          audio: true
+        });
+
+        // Initialize WebRTC service
+        await webrtcService.initialize(interviewId, userId, role);
+        
+        // Set the local stream
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+          console.log('Local video stream set successfully');
+        }
+
+        setIsWebRTCInitialized(true);
+        setIsWaiting(false);
+        console.log('WebRTC initialization completed successfully');
+
+      } catch (error) {
+        console.error('Failed to initialize WebRTC service:', error);
+        toast.error('Failed to join interview');
+        setIsWebRTCInitialized(false);
+      }
+    };
+
+    if (!isWebRTCInitialized && userId && interviewId && role) {
+      initializeWebRTC();
+    }
+
+    return () => {
+      if (isWebRTCInitialized) {
+        webrtcService.cleanup();
+        setIsWebRTCInitialized(false);
+      }
+    };
+  }, [interviewId, userId, role, isWebRTCInitialized]);
+
+  // Render waiting screen
+  const renderWaitingScreen = () => (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-gray-900 dark:to-indigo-950">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg p-10 rounded-2xl shadow-2xl max-w-md w-full border border-indigo-200/20 dark:border-indigo-500/20">
+        <div className="text-center mb-8">
+          <div className="relative mx-auto w-20 h-20 mb-6">
+            <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping"></div>
+            <div className="relative rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 p-5">
+              <User className="w-10 h-10 text-white" />
             </div>
           </div>
-        )}
-
-        <div className="flex-1 flex flex-col items-center space-y-4">
-          {user.role === "candidate" && (
-            <div className="w-full h-[90vh] bg-white rounded-xl shadow-lg p-4">
-              <CodeEditor
-                value={code}
-                onChange={handleCodeChange}
-                language={language}
+          <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 text-transparent bg-clip-text">
+            Waiting for {role === 'candidate' ? 'Interviewer' : 'Candidate'}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300">
+            Please wait while we connect you with the {role === 'candidate' ? 'interviewer' : 'candidate'}...
+          </p>
+        </div>
+        
+        {/* Video Preview Section */}
+        <div className="mb-8 rounded-xl overflow-hidden border border-indigo-200/20 dark:border-indigo-500/20">
+          <div className="bg-gradient-to-r from-indigo-900 to-violet-900 p-4 flex justify-between items-center">
+            <h3 className="font-semibold text-white">Your Video Preview</h3>
+            <div className="flex space-x-2">
+              <button 
+                onClick={() => setIsMuted(!isMuted)}
+                className={`p-2 rounded-full ${isMuted ? 'bg-red-500' : 'bg-indigo-700'}`}
+              >
+                {isMuted ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4 text-white" />}
+              </button>
+              <button 
+                onClick={() => setIsVideoOff(!isVideoOff)}
+                className={`p-2 rounded-full ${isVideoOff ? 'bg-red-500' : 'bg-indigo-700'}`}
+              >
+                {isVideoOff ? <VideoOff className="w-4 h-4 text-white" /> : <Video className="w-4 h-4 text-white" />}
+              </button>
+            </div>
+          </div>
+          <div className="relative aspect-video bg-gradient-to-br from-indigo-900 to-violet-900">
+            {localVideoRef.current && localVideoRef.current.srcObject ? (
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
               />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <Video className="w-12 h-12 mx-auto mb-3 text-indigo-400" />
+                  <p className="text-indigo-400">Initializing camera...</p>
+                </div>
+              </div>
+            )}
+            {isVideoOff && (
+              <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/50">
+                <VideoOff className="w-12 h-12 text-indigo-400" />
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="bg-white/50 dark:bg-indigo-900/50 p-6 rounded-xl mb-8 backdrop-blur-sm border border-indigo-200/20 dark:border-indigo-500/20">
+          <h3 className="font-semibold mb-4 text-indigo-800 dark:text-indigo-200">Connection Details</h3>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3 text-indigo-700 dark:text-indigo-300">
+              <User className="w-4 h-4" />
+              <span className="font-medium">Role:</span>
+              <span className="ml-auto">{role}</span>
             </div>
-          )}
-
-          {user.role === "interviewer" && (
-            <div className="w-full h-[90vh] bg-white rounded-xl shadow-lg p-4 flex items-center justify-center text-gray-500">
-              <p className="text-lg font-medium">
-                You are viewing the candidate's screen...
-              </p>
+            <div className="flex items-center space-x-3 text-indigo-700 dark:text-indigo-300">
+              <MessageSquare className="w-4 h-4" />
+              <span className="font-medium">Interview ID:</span>
+              <span className="ml-auto font-mono">{interviewId}</span>
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="w-1/6 space-y-4">
-          <div className="flex flex-col space-y-4">
-            {[localVideoRef, remoteVideoRef].map((ref, idx) => (
-              <div
-                key={idx}
-                className="relative w-full h-32 rounded-xl shadow-md bg-black flex items-center justify-center overflow-hidden"
+        <div className="text-center bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
+          <div className="inline-flex items-center space-x-2 text-indigo-600 dark:text-indigo-400">
+            <div className="animate-pulse w-2 h-2 rounded-full bg-indigo-500"></div>
+            <p className="text-sm">You'll be notified when they join</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render candidate interface
+  const renderCandidateInterface = () => (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 grid grid-cols-12 gap-4 p-4">
+        {/* Left Panel - Questions */}
+        <div className="col-span-3 bg-indigo-900/10 backdrop-blur-lg rounded-xl p-4 border border-indigo-500/20">
+          <h3 className="text-lg font-semibold text-indigo-200 mb-4">Interview Questions</h3>
+          <div className="space-y-4">
+            {codingQuestions.map((question, index) => (
+              <div 
+                key={index} 
+                className={`bg-indigo-900/5 rounded-lg overflow-hidden transition-all duration-300 ${
+                  openQuestionId === index ? 'ring-2 ring-indigo-500' : ''
+                }`}
               >
-                <video
-                  ref={ref}
-                  autoPlay
-                  muted={idx === 0}
-                  className="w-full h-full object-cover"
-                />
-                {!ref.current?.srcObject && (
-                  <div className="absolute text-white opacity-70">
-                    <User size={48} />
+                <div 
+                  className="p-4 cursor-pointer flex justify-between items-center"
+                  onClick={() => setOpenQuestionId(openQuestionId === index ? null : index)}
+                >
+                  <h4 className="text-indigo-200 font-medium">{question.title || `Question ${index + 1}`}</h4>
+                  <ChevronRight 
+                    className={`w-5 h-5 text-indigo-400 transition-transform duration-300 ${
+                      openQuestionId === index ? 'transform rotate-90' : ''
+                    }`} 
+                  />
+                </div>
+                
+                {openQuestionId === index && (
+                  <div className="p-4 pt-0 border-t border-indigo-500/10">
+                    <p className="text-indigo-300 text-sm">{question.description}</p>
+                    {question.examples && (
+                      <div className="mt-3 space-y-2">
+                        <h5 className="text-indigo-200 text-sm font-medium">Examples:</h5>
+                        {question.examples.map((example, i) => (
+                          <div key={i} className="bg-indigo-900/10 p-2 rounded text-xs">
+                            <p className="text-indigo-300">Input: {example.input}</p>
+                            <p className="text-indigo-300">Output: {example.output}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {question.constraints && (
+                      <div className="mt-3">
+                        <h5 className="text-indigo-200 text-sm font-medium">Constraints:</h5>
+                        <ul className="list-disc list-inside text-indigo-300 text-sm mt-1">
+                          {question.constraints.map((constraint, i) => (
+                            <li key={i}>{constraint}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => handleQuestionClick(question)}
+                      className="mt-4 w-full py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-md text-sm transition-colors"
+                    >
+                      Start Solving
+                    </button>
                   </div>
                 )}
               </div>
             ))}
           </div>
         </div>
+
+        {/* Center Panel - Code Editor */}
+        <div className="col-span-6 bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden border border-indigo-500/20">
+          <CodeEditor
+            value={code}
+            onChange={setCode}
+            language="javascript"
+            theme="vs-dark"
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              lineNumbers: 'on',
+              roundedSelection: false,
+              scrollBeyondLastLine: false,
+              readOnly: false,
+              automaticLayout: true,
+            }}
+          />
+        </div>
+
+        {/* Right Panel - Video Call */}
+        <div className="col-span-3 bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden border border-indigo-500/20">
+          <VideoCall
+            roomId={interviewId}
+            userId={user?.id}
+            role={user?.role}
+            onClose={handleLeaveInterview}
+          />
+        </div>
       </div>
 
-      <div className="flex justify-center gap-4 mt-2 mb-2">
-        {[
-          [toggleAudio, isMuted ? <MicOff /> : <Mic />],
-          [toggleVideo, isVideoOff ? <VideoOff /> : <Video />],
-          [toggleScreenShare, <Monitor />],
-          [() => setIsChatOpen((prev) => !prev), <MessageSquare />],
-          [handleLeaveInterview, <X />],
-        ].map(([onClick, icon], idx) => (
+      {/* Control Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-indigo-900/90 backdrop-blur-lg border-t border-indigo-500/20 p-4">
+        <div className="flex items-center justify-center space-x-4">
           <button
-            key={idx}
-            onClick={onClick}
-            className={`p-3 rounded-full shadow-md transition duration-200 ${
-              idx === 4
-                ? "bg-red-500 text-white hover:bg-red-600"
-                : "bg-white text-gray-700 hover:bg-gray-100"
+            onClick={() => setIsMuted(!isMuted)}
+            className={`p-3 rounded-full transition-colors ${
+              isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-700 hover:bg-indigo-600'
             }`}
           >
-            {icon}
+            {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
           </button>
-        ))}
+          <button
+            onClick={() => setIsVideoOff(!isVideoOff)}
+            className={`p-3 rounded-full transition-colors ${
+              isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-700 hover:bg-indigo-600'
+            }`}
+          >
+            {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
+          </button>
+          <button
+            onClick={() => setIsScreenSharing(!isScreenSharing)}
+            className={`p-3 rounded-full transition-colors ${
+              isScreenSharing ? 'bg-violet-500 hover:bg-violet-600' : 'bg-indigo-700 hover:bg-indigo-600'
+            }`}
+          >
+            <Monitor className="w-6 h-6 text-white" />
+          </button>
+          <button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className={`p-3 rounded-full transition-colors ${
+              isChatOpen ? 'bg-violet-500 hover:bg-violet-600' : 'bg-indigo-700 hover:bg-indigo-600'
+            }`}
+          >
+            <MessageSquare className="w-6 h-6 text-white" />
+          </button>
+          <button
+            onClick={handleLeaveInterview}
+            className="p-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors"
+          >
+            <PhoneOff className="w-6 h-6 text-white" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render interviewer interface
+  const renderInterviewerInterface = () => (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 grid grid-cols-12 gap-4 p-4">
+        {/* Left Panel - Live Preview */}
+        <div className="col-span-3 bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden border border-indigo-500/20">
+          <div className="h-full">
+            <h3 className="text-lg font-semibold text-indigo-200 p-4">Candidate's Screen</h3>
+            <div className="relative h-[calc(100%-4rem)]">
+              {isScreenSharing ? (
+                <video
+                  ref={screenShareRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-indigo-400">
+                  <Monitor className="w-12 h-12 mb-3" />
+                  <p>Waiting for screen share...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Center Panel - Code Editor */}
+        {isScreenSharing ? (
+          <div className="col-span-6 bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden border border-indigo-500/20">
+            <div className="h-full">
+              <h3 className="text-lg font-semibold text-indigo-200 p-4">Candidate's Code Editor</h3>
+              <div className="relative h-[calc(100%-4rem)]">
+                <video
+                  ref={screenShareRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="col-span-6 bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden flex items-center justify-center border border-indigo-500/20">
+            <div className="text-center text-indigo-400">
+              <Monitor className="w-12 h-12 mx-auto mb-3" />
+              <p>Waiting for candidate to share their screen...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Right Panel - Video Call */}
+        <div className="col-span-3 bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden border border-indigo-500/20">
+          <VideoCall
+            roomId={interviewId}
+            userId={user?.id}
+            role={user?.role}
+            onClose={handleLeaveInterview}
+          />
+        </div>
       </div>
 
-      {isChatOpen && (
-        <div className="fixed bottom-6 right-6 w-80 h-96 bg-white rounded-xl shadow-xl p-4 flex flex-col z-50 border border-gray-200">
-          <div className="flex-1 overflow-y-auto border-b pb-2 mb-2">
-            {messages.map((msg, idx) => (
-              <div key={idx} className="text-sm mb-1">
-                <span className="font-semibold text-gray-800">
-                  {msg.sender}
-                </span>
-                : {msg.content}
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-          <form onSubmit={sendMessage} className="flex mt-2">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              className="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none"
-              placeholder="Type a message..."
-            />
-            <button
-              type="submit"
-              className="bg-blue-500 text-white p-2 rounded-r-md"
-            >
-              <Send size={18} />
-            </button>
-          </form>
+      {/* Control Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-indigo-900/90 backdrop-blur-lg border-t border-indigo-500/20 p-4">
+        <div className="flex items-center justify-center space-x-4">
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className={`p-3 rounded-full transition-colors ${
+              isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-700 hover:bg-indigo-600'
+            }`}
+          >
+            {isMuted ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
+          </button>
+          <button
+            onClick={() => setIsVideoOff(!isVideoOff)}
+            className={`p-3 rounded-full transition-colors ${
+              isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-700 hover:bg-indigo-600'
+            }`}
+          >
+            {isVideoOff ? <VideoOff className="w-6 h-6 text-white" /> : <Video className="w-6 h-6 text-white" />}
+          </button>
+          <button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className={`p-3 rounded-full transition-colors ${
+              isChatOpen ? 'bg-violet-500 hover:bg-violet-600' : 'bg-indigo-700 hover:bg-indigo-600'
+            }`}
+          >
+            <MessageSquare className="w-6 h-6 text-white" />
+          </button>
+          <button
+            onClick={handleLeaveInterview}
+            className="p-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors"
+          >
+            <PhoneOff className="w-6 h-6 text-white" />
+          </button>
         </div>
-      )}
+      </div>
+    </div>
+  );
+
+  // Show error state only if there's an error and not joined
+  if (error && !isJoined) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-gray-900 dark:to-indigo-950">
+        <div className="text-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg p-10 rounded-2xl shadow-2xl border border-indigo-200/20 dark:border-indigo-500/20">
+          <div className="text-red-500 text-xl mb-4">Error</div>
+          <p className="text-gray-600 dark:text-gray-300">{error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="mt-4 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show waiting screen only if not joined and not loading
+  if (!isJoined && !isLoading) {
+    return renderWaitingScreen();
+  }
+
+  // Show the main interview interface
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-violet-900 text-white">
+      {/* Header */}
+      <header className="bg-indigo-900/40 backdrop-blur-lg border-b border-indigo-500/20 sticky top-0 z-50">
+        <div className="px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-violet-400 to-indigo-400 text-transparent bg-clip-text">
+                Interview Room
+              </h1>
+              <div className="h-6 w-px bg-indigo-500/20" />
+              <div className="flex items-center space-x-2">
+                <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-sm font-medium">
+                  {role === "interviewer" ? "Interviewer" : "Candidate"}
+                </span>
+                <span className="px-3 py-1 rounded-full bg-indigo-900/30 text-indigo-300 text-sm">
+                  ID: {interviewId}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="h-[calc(100vh-4rem)]">
+        {role === "candidate" ? renderCandidateInterface() : renderInterviewerInterface()}
+      </div>
+
+      {/* Floating Chat Panel */}
+      <AnimatePresence>
+        {isChatOpen && (
+          <motion.div 
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 100 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-24 right-6 w-96 bg-indigo-900/90 backdrop-blur-xl rounded-2xl shadow-2xl z-50 border border-indigo-500/20"
+          >
+            <div className="flex justify-between items-center p-4 border-b border-indigo-500/20">
+              <h3 className="font-medium text-lg bg-gradient-to-r from-indigo-400 to-violet-400 text-transparent bg-clip-text">Chat</h3>
+              <button
+                onClick={() => setIsChatOpen(false)}
+                className="text-indigo-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 h-[400px] overflow-y-auto">
+              <ChatBox
+                messages={messages}
+                onSendMessage={sendMessage}
+                role={role}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 export default InterviewPage;
-// "use client";
-
-// import React, { useRef, useEffect, useState, useCallback } from "react";
-// import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-// import { toast } from "react-hot-toast";
-// import {
-//   Video,
-//   Mic,
-//   MicOff,
-//   VideoOff,
-//   Send,
-//   X,
-//   Monitor,
-//   User,
-//   MessageSquare,
-// } from "lucide-react";
-// import axios from "axios";
-// import webrtcService from "../services/webrtc";
-// import CodeEditor from "../components/CodeEditor";
-// import { useAuth } from "../context/AuthContext";
-// import { codingQuestions } from "../data/codingquestions";
-// import api from "../services/api";
-// import { socketService } from "../services/socketService";
-
-// const InterviewPage = () => {
-
-//   const { interviewId } = useParams();
-//   console.log(interviewId)
-//   const navigate = useNavigate();
-//   const [searchParams] = useSearchParams();
-//   const { user, isAuthenticated, isCandidate } = useAuth();
-//   const role = searchParams.get("role");
-
-//   const [isConnecting, setIsConnecting] = useState(true);
-//   const [isMuted, setIsMuted] = useState(false);
-//   const [isVideoOff, setIsVideoOff] = useState(false);
-//   const [isScreenSharing, setIsScreenSharing] = useState(false);
-//   const [isChatOpen, setIsChatOpen] = useState(false);
-//   const [messages, setMessages] = useState([]);
-//   const [newMessage, setNewMessage] = useState("");
-//   const [code, setCode] = useState("");
-//   const [language, setLanguage] = useState("javascript");
-//   const [error, setError] = useState(null);
-//   const [connectionStatus, setConnectionStatus] = useState("disconnected");
-//   const [selectedQuestion, setSelectedQuestion] = useState(null);
-
-//   const localVideoRef = useRef(null);
-//   const remoteVideoRef = useRef(null);
-//   const messagesEndRef = useRef(null);
-
-//   useEffect(() => {
-//     if (!isAuthenticated) {
-//       navigate("/login");
-//       return;
-//     }
-//     if (!user?._id) {
-//       setError("User ID not found. Please log in again.");
-//       return;
-//     }
-//     if (!role && !isCandidate) {
-//       setError("Invalid role. Please specify your role.");
-//       return;
-//     }
-//   }, [isAuthenticated, user, role, isCandidate, navigate]);
-
-//  const initializeConnection = useCallback(async () => {
-//    try {
-//      setIsConnecting(true);
-//      setError(null);
-//      const isInitiator = role === "interviewer";
-//      await webrtcService.initialize(interviewId, isInitiator);
-//      webrtcService.onStream((stream) => {
-//        if (remoteVideoRef.current) {
-//          remoteVideoRef.current.srcObject = stream;
-//        }
-//      });
-
-//      webrtcService.onMessage((message) => {
-//        setMessages((prev) => [...prev, message]);
-//      });
-
-//      if (isInitiator) {
-//        const localStream = await webrtcService.startCall();
-//        if (localVideoRef.current) {
-//          localVideoRef.current.srcObject = localStream;
-//        }
-//      }
-
-//      webrtcService.peerConnection.onconnectionstatechange = () => {
-//        setConnectionStatus(webrtcService.peerConnection.connectionState);
-//      };
-
-//      setIsConnecting(false);
-//    } catch (error) {
-//      console.error("Connection error:", error);
-//      setError(error.message || "Failed to establish connection");
-//      setIsConnecting(false);
-//      toast.error(
-//        error.response?.data?.message || "Failed to establish connection"
-//      );
-//    }
-//  }, [interviewId, role]);
-
-//   useEffect(() => {
-//     if (user && interviewId && role) {
-//       initializeConnection();
-//       socketService.connect(user._id, interviewId, role);
-//     }
-//   }, [user, interviewId, role, initializeConnection]);
-
-//   useEffect(() => {
-//     return () => {
-//       if (webrtcService) {
-//         webrtcService.cleanup();
-//       }
-//     };
-//   }, []);
-
-//   const toggleAudio = useCallback(() => {
-//     const enabled = webrtcService.toggleAudio();
-//     setIsMuted(!enabled);
-//   }, []);
-
-//   const toggleVideo = useCallback(() => {
-//     const enabled = webrtcService.toggleVideo();
-//     setIsVideoOff(!enabled);
-//   }, []);
-
-//   const toggleScreenShare = useCallback(async () => {
-//     try {
-//       if (!isScreenSharing) {
-//         const screenStream = await webrtcService.startScreenShare();
-//         if (localVideoRef.current) {
-//           localVideoRef.current.srcObject = screenStream;
-//         }
-//         setIsScreenSharing(true);
-//       } else {
-//         await webrtcService.stopScreenShare();
-//         if (localVideoRef.current) {
-//           localVideoRef.current.srcObject = webrtcService.getLocalStream();
-//         }
-//         setIsScreenSharing(false);
-//       }
-//     } catch (error) {
-//       console.error("Screen share error:", error);
-//       toast.error("Failed to toggle screen sharing");
-//     }
-//   }, [isScreenSharing]);
-
-//   const sendMessage = useCallback(
-//     (e) => {
-//       e.preventDefault();
-//       if (!newMessage.trim()) return;
-
-//       const messageData = {
-//         content: newMessage,
-//         sender: user._id,
-//         timestamp: new Date().toISOString(),
-//       };
-
-//       webrtcService.socket?.emit("chat-message", {
-//         roomId: interviewId,
-//         message: messageData,
-//       });
-
-//       setMessages((prev) => [...prev, messageData]);
-//       setNewMessage("");
-//     },
-//     [newMessage, user._id, interviewId]
-//   );
-
-//   const handleCodeChange = useCallback(
-//     (newCode) => {
-//       setCode(newCode);
-//       webrtcService.socket?.emit("code-update", {
-//         roomId: interviewId,
-//         code: newCode,
-//         language,
-//       });
-//     },
-//     [interviewId, language]
-//   );
-
-//   const handleLeaveInterview = useCallback(async () => {
-//     try {
-//       // await apipost(`localhost:5000/api/interviews/${interviewId}/leave`);
-//       await
-//       api.post(`/interviews/${interviewId}/leave`);
-//       if (webrtcService) {
-//         webrtcService.cleanup();
-//       }
-//       navigate("/dashboard");
-//     } catch (error) {
-//       console.error("Error leaving interview:", error);
-//       toast.error(error.response?.data?.message || "Failed to leave interview");
-//     }
-//   }, [interviewId, navigate]);
-
-//   const handleQuestionClick = (question) => {
-//     setSelectedQuestion(question);
-//     setCode(question.starterCode);
-//     setLanguage("javascript"); // Update this if the language is different
-//   };
-
-//   if (error) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-//         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-//           <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-//           <p className="text-gray-700">{error}</p>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-blue-200 p-0 flex flex-col">
-//       <div className="flex flex-1 w-full">
-//         <div className="w-1/4 space-y-4">
-//           {/* Questions Section */}
-//           <div className="bg-white p-4 rounded-xl shadow-lg overflow-y-auto max-h-full">
-//             <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-//               Interview Questions
-//             </h2>
-//             <ul className="list-disc list-inside text-gray-700 space-y-2">
-//               {codingQuestions.map((question, index) => (
-//                 <li
-//                   key={index}
-//                   onClick={() => handleQuestionClick(question)}
-//                   className="cursor-pointer hover:bg-gray-200 p-2 rounded"
-//                 >
-//                   {question.title}
-//                 </li>
-//               ))}
-//             </ul>
-//             {selectedQuestion && (
-//               <div className="mt-4 p-4 bg-gray-100 rounded-lg">
-//                 <h3 className="text-xl font-semibold text-gray-800 mb-2">
-//                   {selectedQuestion.title} ({selectedQuestion.difficulty})
-//                 </h3>
-//                 <p className="text-gray-700 mb-4">
-//                   {selectedQuestion.description}
-//                 </p>
-//                 <h4 className="text-lg font-semibold text-gray-800">
-//                   Examples:
-//                 </h4>
-//                 <ul className="list-disc list-inside text-gray-700 space-y-2">
-//                   {selectedQuestion.examples.map((example, index) => (
-//                     <li key={index}>
-//                       <strong>Input:</strong> {example.input}
-//                       <br />
-//                       <strong>Output:</strong> {example.output}
-//                       <br />
-//                       <strong>Explanation:</strong> {example.explanation}
-//                     </li>
-//                   ))}
-//                 </ul>
-//               </div>
-//             )}
-//           </div>
-//         </div>
-
-//         <div className="flex-1 flex flex-col items-center space-y-4">
-//           {/* Code Editor */}
-//           <div className="w-full h-[90vh] bg-white rounded-xl shadow-lg p-4">
-//             <CodeEditor
-//               value={code}
-//               onChange={handleCodeChange}
-//               language={language}
-//             />
-//           </div>
-//         </div>
-
-//         <div className="w-1/6 space-y-4">
-//           {/* Video Section */}
-//           <div className="flex flex-col space-y-4">
-//             {[localVideoRef, remoteVideoRef].map((ref, idx) => (
-//               <div
-//                 key={idx}
-//                 className="relative w-full h-32 rounded-xl shadow-md bg-black flex items-center justify-center overflow-hidden"
-//               >
-//                 <video
-//                   ref={ref}
-//                   autoPlay
-//                   muted={idx === 0}
-//                   className="w-full h-full object-cover"
-//                 />
-//                 {!ref.current?.srcObject && (
-//                   <div className="absolute text-white opacity-70">
-//                     <User size={48} />
-//                   </div>
-//                 )}
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Controls */}
-//       <div className="flex justify-center gap-4 mt-2 mb-2">
-//         {[
-//           [toggleAudio, isMuted ? <MicOff /> : <Mic />],
-//           [toggleVideo, isVideoOff ? <VideoOff /> : <Video />],
-//           [toggleScreenShare, <Monitor />],
-//           [() => setIsChatOpen((prev) => !prev), <MessageSquare />],
-//           [handleLeaveInterview, <X />],
-//         ].map(([onClick, icon], idx) => (
-//           <button
-//             key={idx}
-//             onClick={onClick}
-//             className={`p-3 rounded-full shadow-md transition duration-200 ${
-//               idx === 4
-//                 ? "bg-red-500 text-white hover:bg-red-600"
-//                 : "bg-white text-gray-700 hover:bg-gray-100"
-//             }`}
-//           >
-//             {icon}
-//           </button>
-//         ))}
-//       </div>
-
-//       {/* Chat Popup */}
-//       {isChatOpen && (
-//         <div className="fixed bottom-6 right-6 w-80 h-96 bg-white rounded-xl shadow-xl p-4 flex flex-col z-50 border border-gray-200">
-//           <div className="flex-1 overflow-y-auto border-b pb-2 mb-2">
-//             {messages.map((msg, idx) => (
-//               <div key={idx} className="text-sm mb-1">
-//                 <span className="font-semibold text-gray-800">
-//                   {msg.sender}
-//                 </span>
-//                 : {msg.content}
-//               </div>
-//             ))}
-//             <div ref={messagesEndRef} />
-//           </div>
-//           <form onSubmit={sendMessage} className="flex mt-2">
-//             <input
-//               type="text"
-//               value={newMessage}
-//               onChange={(e) => setNewMessage(e.target.value)}
-//               className="flex-grow p-2 border rounded-l focus:outline-none focus:ring-2 focus:ring-blue-400"
-//               placeholder="Type a message"
-//             />
-//             <button
-//               type="submit"
-//               className="bg-blue-500 text-white px-4 rounded-r hover:bg-blue-600"
-//             >
-//               <Send size={16} />
-//             </button>
-//           </form>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default InterviewPage;

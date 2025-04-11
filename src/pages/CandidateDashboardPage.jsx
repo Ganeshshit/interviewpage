@@ -16,12 +16,14 @@ import {
   AlertCircle,
   Star,
   Video,
-  User
+  User,
+  Users
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from '../config/axios';
 import { format } from 'date-fns';
 import { FaCalendarAlt, FaClock, FaUser, FaVideo, FaDoorOpen, FaLink, FaArrowRight } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
 const CandidateDashboardPage = () => {
   const { user, logout } = useAuth();
@@ -41,7 +43,7 @@ const CandidateDashboardPage = () => {
       completedInterviews: 0,
       upcomingInterviews: 0,
       totalHours: 0,
-      averageScore: 0
+      averageRating: 0
     }
   });
 
@@ -251,62 +253,64 @@ const CandidateDashboardPage = () => {
     const formattedTime = format(new Date(interview.scheduledTime), 'hh:mm a');
 
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-4 hover:shadow-lg transition-shadow duration-300">
+      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-xl shadow-lg border border-indigo-100/20 p-6 mb-4 hover:shadow-xl transition-all duration-300">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white bg-gradient-to-r from-indigo-600 to-violet-600 text-transparent bg-clip-text">
               {interview.topic}
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">
+            <p className="text-indigo-600/70 dark:text-indigo-400/70 mt-1">
               with {interview.interviewer?.name || 'Interviewer'}
             </p>
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
             isUpcoming 
-              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              ? 'bg-gradient-to-r from-indigo-100 to-violet-100 text-indigo-800 dark:from-indigo-900/50 dark:to-violet-900/50 dark:text-indigo-200'
               : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
           }`}>
-           
+            {isUpcoming ? 'Upcoming' : 'Completed'}
           </span>
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center text-gray-600 dark:text-gray-300">
+          <div className="flex items-center text-indigo-600/70 dark:text-indigo-400/70">
             <FaCalendarAlt className="mr-2" />
             <span>{formattedDate} at {formattedTime}</span>
           </div>
-          <div className="flex items-center text-gray-600 dark:text-gray-300">
+          <div className="flex items-center text-indigo-600/70 dark:text-indigo-400/70">
             <FaClock className="mr-2" />
             <span>{interview.duration} minutes</span>
           </div>
-          <div className="flex items-center text-gray-600 dark:text-gray-300">
+          <div className="flex items-center text-indigo-600/70 dark:text-indigo-400/70">
             <FaDoorOpen className="mr-2" />
             <span>Room ID: {interview.roomId}</span>
           </div>
         </div>
 
         {isUpcoming && interview.meetingLink && (
-          <div className="mt-4">
-            <button
+          <div className="mt-6">
+            <motion.button
               onClick={() => handleJoinInterview(interview)}
-              className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-300"
+              className="w-full flex items-center justify-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg hover:from-indigo-700 hover:to-violet-700 transition-all duration-300 shadow-lg hover:shadow-indigo-200/50"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
               <FaVideo className="mr-2" />
               Join Interview
-            </button>
+            </motion.button>
           </div>
         )}
 
         {!isUpcoming && interview.feedback && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
+          <div className="mt-6 p-4 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-lg">
             <h4 className="font-medium text-gray-900 dark:text-white mb-2">Feedback</h4>
             <div className="flex items-center mb-2">
               <span className="text-yellow-500 mr-1">★</span>
-              <span className="text-gray-600 dark:text-gray-300">
+              <span className="text-indigo-600/70 dark:text-indigo-400/70">
                 {interview.feedback.rating}/5
               </span>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-indigo-600/70 dark:text-indigo-400/70">
               {interview.feedback.comments}
             </p>
           </div>
@@ -368,55 +372,127 @@ const CandidateDashboardPage = () => {
   };
 
   const InterviewersList = () => (
-    <div className="bg-white dark:bg-[#29354d] rounded-xl p-5 shadow-md">
+    <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-xl p-6 shadow-lg border border-indigo-100/20">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-          Available Interviewers
-        </h3>
+        <div>
+          <h3 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-transparent bg-clip-text">
+            Available Interviewers
+          </h3>
+          <p className="text-sm text-indigo-600/70 mt-1">
+            Connect with experienced interviewers for your next session
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <motion.button
+            className="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50/50 rounded-lg transition-all duration-300"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Sort by Rating
+          </motion.button>
+          <motion.button
+            className="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50/50 rounded-lg transition-all duration-300"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Filter by Expertise
+          </motion.button>
+        </div>
       </div>
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {dashboardData.availableInterviewers?.length > 0 ? (
           dashboardData.availableInterviewers.map((interviewer) => (
-            <div
+            <motion.div
               key={interviewer._id}
-              className="bg-gray-50 dark:bg-[#1e293b] rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+              className="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-xl p-5 border border-indigo-100/20 hover:shadow-lg transition-all duration-300"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h4 className="font-medium text-gray-900 dark:text-white">
-                      {interviewer.name}
-                    </h4>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      interviewer.isActive 
-                        ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                    }`}>
-                      {interviewer.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                    <div className="p-2 bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-500/10 dark:to-violet-500/10 rounded-lg">
+                      <User className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">
+                        {interviewer.name}
+                      </h4>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        interviewer.isActive 
+                          ? 'bg-gradient-to-r from-indigo-100 to-violet-100 text-indigo-800 dark:from-indigo-900/50 dark:to-violet-900/50 dark:text-indigo-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                      }`}>
+                        {interviewer.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-medium">Email:</span> {interviewer.email}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-medium">Expertise:</span> {interviewer.expertise?.join(', ') || 'Not specified'}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-medium">Experience:</span> {interviewer.experience || 'Not specified'} years
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-medium">Skills:</span> {interviewer.skills?.join(', ') || 'Not specified'}
-                    </p>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center text-indigo-600/70 dark:text-indigo-400/70">
+                      <span className="font-medium mr-2">Email:</span>
+                      <span>{interviewer.email}</span>
+                    </div>
+                    <div className="flex items-center text-indigo-600/70 dark:text-indigo-400/70">
+                      <span className="font-medium mr-2">Expertise:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {interviewer.expertise?.map((skill, index) => (
+                          <span key={index} className="px-2 py-1 text-xs bg-indigo-100/50 dark:bg-indigo-900/20 rounded-full">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center text-indigo-600/70 dark:text-indigo-400/70">
+                      <span className="font-medium mr-2">Experience:</span>
+                      <span>{interviewer.experience || 'Not specified'} years</span>
+                    </div>
+                    <div className="flex items-center text-indigo-600/70 dark:text-indigo-400/70">
+                      <span className="font-medium mr-2">Rating:</span>
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < (interviewer.rating || 0)
+                                ? 'text-yellow-500 fill-current'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                        <span className="ml-1 text-sm">({interviewer.rating || 0}/5)</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+              <div className="mt-4 flex gap-2">
+                <motion.button
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-violet-600 rounded-lg hover:from-indigo-700 hover:to-violet-700 transition-all duration-300 shadow-lg hover:shadow-indigo-200/50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  View Profile
+                </motion.button>
+                <motion.button
+                  className="flex-1 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50/50 rounded-lg transition-all duration-300"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Schedule Interview
+                </motion.button>
+              </div>
+            </motion.div>
           ))
         ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400">
-              No interviewers found in the database.
+          <div className="col-span-2 text-center py-8">
+            <div className="p-4 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-xl inline-block">
+              <Users className="h-12 w-12 text-indigo-600 dark:text-indigo-400 mx-auto" />
+            </div>
+            <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
+              No interviewers available
+            </h3>
+            <p className="mt-1 text-indigo-600/70 dark:text-indigo-400/70">
+              Please check back later for available interviewers.
             </p>
           </div>
         )}
@@ -469,68 +545,67 @@ const CandidateDashboardPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-transparent bg-clip-text">
             Welcome, {user?.name}
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            {user?.role === 'candidate' 
-              ? `You have ${dashboardData.stats.upcomingInterviews} upcoming interviews`
-              : `You have ${dashboardData.stats.upcomingInterviews} interviews to conduct`
-            }
+          <p className="mt-1 text-sm text-indigo-600/70">
+            You have {dashboardData.stats.upcomingInterviews} upcoming interviews
           </p>
           <NotificationBadge />
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-[#29354d] rounded-xl p-5 shadow-md">
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-xl p-5 shadow-lg border border-indigo-100/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                  {user?.role === 'candidate' ? 'Completed Interviews' : 'Conducted Interviews'}
+                <p className="text-sm font-medium text-indigo-600/70 dark:text-indigo-400/70">
+                  Completed Interviews
                 </p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                   {dashboardData.stats.completedInterviews}
                 </p>
               </div>
-              <div className="p-3 bg-[#fcc250]/10 rounded-full">
-                <CheckCircle className="h-6 w-6 text-[#fcc250]" />
+              <div className="p-3 bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-500/10 dark:to-violet-500/10 rounded-full">
+                <CheckCircle className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#29354d] rounded-xl p-5 shadow-md">
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-xl p-5 shadow-lg border border-indigo-100/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Upcoming Interviews</p>
+                <p className="text-sm font-medium text-indigo-600/70 dark:text-indigo-400/70">Upcoming Interviews</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">{dashboardData.stats.upcomingInterviews}</p>
               </div>
-              <div className="p-3 bg-[#fcc250]/10 rounded-full">
-                <Calendar className="h-6 w-6 text-[#fcc250]" />
+              <div className="p-3 bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-500/10 dark:to-violet-500/10 rounded-full">
+                <Calendar className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#29354d] rounded-xl p-5 shadow-md">
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-xl p-5 shadow-lg border border-indigo-100/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Hours</p>
+                <p className="text-sm font-medium text-indigo-600/70 dark:text-indigo-400/70">Total Hours</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">{dashboardData.stats.totalHours}h</p>
               </div>
-              <div className="p-3 bg-[#fcc250]/10 rounded-full">
-                <Clock className="h-6 w-6 text-[#fcc250]" />
+              <div className="p-3 bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-500/10 dark:to-violet-500/10 rounded-full">
+                <Clock className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
             </div>
           </div>
-
-          <div className="bg-white dark:bg-[#29354d] rounded-xl p-5 shadow-md">
+          
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-xl p-5 shadow-lg border border-indigo-100/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Average Score</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{dashboardData.stats.averageScore.toFixed(1)}/10</p>
+                <p className="text-sm font-medium text-indigo-600/70 dark:text-indigo-400/70">Average Rating</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  {(dashboardData.stats?.averageRating || 0).toFixed(1)}/5
+                </p>
               </div>
-              <div className="p-3 bg-[#fcc250]/10 rounded-full">
-                <Star className="h-6 w-6 text-[#fcc250]" />
+              <div className="p-3 bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-500/10 dark:to-violet-500/10 rounded-full">
+                <Star className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
             </div>
           </div>
@@ -540,7 +615,7 @@ const CandidateDashboardPage = () => {
         {user?.role === 'candidate' && <InterviewersList />}
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <div className="border-b border-indigo-100/20 dark:border-indigo-900/20 mb-6">
           <nav className="flex space-x-8">
             {['upcoming', 'completed'].map((tab) => (
               <button
@@ -548,8 +623,8 @@ const CandidateDashboardPage = () => {
                 onClick={() => setActiveTab(tab)}
                 className={`${
                   activeTab === tab
-                    ? "border-b-2 border-[#fcc250] text-[#fcc250]"
-                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                    ? "border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                 } whitespace-nowrap py-4 px-1 font-medium text-sm capitalize`}
               >
                 {tab}
@@ -558,7 +633,7 @@ const CandidateDashboardPage = () => {
           </nav>
         </div>
 
-        {/* Content based on active tab */}
+        {/* Tab Content */}
         {renderTabContent()}
       </div>
     </DashboardLayout>

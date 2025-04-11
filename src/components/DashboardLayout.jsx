@@ -9,8 +9,10 @@ import {
   FileText,
   Users,
   GraduationCap,
-  LogOut
+  LogOut,
+  Video
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const DashboardLayout = ({ children }) => {
   const location = useLocation();
@@ -81,39 +83,48 @@ const DashboardLayout = ({ children }) => {
   const navigation = getNavigation();
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#1a1f2e]">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-violet-50">
       {/* Header */}
-      <header className="bg-white dark:bg-[#29354d] shadow-sm">
+      <header className="bg-white/70 backdrop-blur-lg fixed top-0 left-0 right-0 z-50 shadow-sm border-b border-indigo-100/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-             
+            <div className="flex items-center gap-3">
+              <motion.div 
+                className="bg-gradient-to-br from-indigo-600 to-violet-600 p-2 rounded-lg shadow-lg"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 300 }}>
+                <Video className="h-6 w-6 text-white" />
+              </motion.div>
+              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 text-transparent bg-clip-text tracking-tight">InterviewPro</span>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="text-sm text-indigo-600/70">
                 Welcome, {user?.name}
               </span>
-              <button
+              <motion.button
                 onClick={logout}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50/50 rounded-lg transition-all duration-300"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <LogOut size={16} />
                 Logout
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
-        <div className="flex flex-col h-full">
+      <div className="fixed inset-y-0 left-0 w-64 bg-white/70 backdrop-blur-xl shadow-lg border-r border-indigo-100/20 mt-16">
+        <div className="flex flex-col h-[calc(100vh-4rem)]">
           {/* Header */}
-          <div className="flex flex-col items-center justify-center h-32 px-4 bg-slate-900">
+          <div className="flex flex-col items-center justify-center h-32 px-4 bg-gradient-to-br from-indigo-600 to-violet-600">
             <h1 className="text-xl font-bold text-white">Interview Platform</h1>
-            <div className="mt-2 text-sm text-slate-300">
+            <div className="mt-2 text-sm text-indigo-100">
               {user?.name}
-              <span className="px-2 py-1 ml-2 text-xs capitalize bg-slate-100 text-slate-900 rounded-full">
+              <span className="px-2 py-1 ml-2 text-xs capitalize bg-white/20 text-white rounded-full">
                 {user?.role}
               </span>
             </div>
@@ -127,10 +138,10 @@ const DashboardLayout = ({ children }) => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${
+                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
                     location.pathname === item.href
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg'
+                      : 'text-indigo-600/70 hover:bg-indigo-50/50 hover:text-indigo-600'
                   }`}
                 >
                   {Icon && <Icon className="w-5 h-5 mr-3" />}
@@ -141,30 +152,32 @@ const DashboardLayout = ({ children }) => {
           </nav>
 
           {/* User Info & Logout */}
-          <div className="p-4 border-t border-slate-200">
+          <div className="p-4 border-t border-indigo-100/20">
             <div className="mb-4">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-indigo-600/70">
                 {user?.email}
               </p>
               {user?.role === 'interviewer' && (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-indigo-600/70">
                   {user?.department}
                 </p>
               )}
             </div>
-            <button
+            <motion.button
               onClick={logout}
-              className="w-full px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-colors duration-150 flex items-center justify-center"
+              className="w-full px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-violet-600 rounded-lg hover:from-indigo-700 hover:to-violet-700 transition-all duration-300 shadow-lg hover:shadow-indigo-200/50 flex items-center justify-center"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="pl-64">
+      <div className="pl-64 pt-16">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </main>
