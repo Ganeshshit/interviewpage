@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://interviewbackend-zfwp.onrender.com/api',
+  baseURL: 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true // Enable sending cookies
+  withCredentials: true
 });
 
 // Add error handling interceptor

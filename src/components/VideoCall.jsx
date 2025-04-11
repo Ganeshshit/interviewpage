@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { webrtcService } from '../services/webrtc';
 import { toast } from 'react-hot-toast';
-import { Video, Mic, MicOff, VideoOff, Monitor, X, User } from 'lucide-react';
+import { Video, Mic, MicOff, VideoOff, Monitor, X, User, AlertCircle } from 'lucide-react';
 
 const VideoCall = ({ roomId, userId, role, onClose }) => {
   const localVideoRef = useRef(null);
@@ -11,100 +11,215 @@ const VideoCall = ({ roomId, userId, role, onClose }) => {
   const [remoteStream, setRemoteStream] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [localStream, setLocalStream] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Initialize local video stream
-  useEffect(() => {
-    let mounted = true;
+  // Function to detect browser
+  const getBrowser = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (userAgent.indexOf('firefox') > -1) return 'firefox';
+    if (userAgent.indexOf('chrome') > -1) return 'chrome';
+    return 'other';
+  };
 
-    const initializeLocalVideo = async () => {
-      try {
-        if (!roomId || !userId || !role) {
-          console.log('Waiting for required parameters...');
-          return;
+  // Function to check available devices
+  const checkMediaDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      const audioDevices = devices.filter(device => device.kind === 'audioinput');
+      
+      console.log('Available devices:', {
+        video: videoDevices.map(d => ({ label: d.label, id: d.deviceId })),
+        audio: audioDevices.map(d => ({ label: d.label, id: d.deviceId }))
+      });
+
+      return {
+        hasVideo: videoDevices.length > 0,
+        hasAudio: audioDevices.length > 0,
+        videoDevices,
+        audioDevices
+      };
+    } catch (error) {
+      console.error('Error enumerating devices:', error);
+      return { hasVideo: true, hasAudio: true }; // Assume devices exist if enumeration fails
+    }
+  };
+
+  // Function to get video constraints based on browser and available devices
+  const getVideoConstraints = async () => {
+    const browser = getBrowser();
+    console.log('Browser detected:', browser);
+
+    const devices = await checkMediaDevices();
+    console.log('Media devices check:', devices);
+
+    // Firefox-specific adjustments
+    if (browser === 'firefox') {
+      // Try to get the first video device ID if available
+      const videoDeviceId = devices.videoDevices?.[0]?.deviceId;
+      
+      return {
+        audio: {
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true }
+        },
+        video: {
+          ...(videoDeviceId ? { deviceId: { exact: videoDeviceId } } : {}),
+          width: { min: 320, ideal: 640, max: 1280 },
+          height: { min: 240, ideal: 480, max: 720 },
+          frameRate: { ideal: 24 }
         }
+      };
+    }
 
-        // Get local media stream first
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: "user"
-          },
-          audio: true
-        });
-
-        // Check if component is still mounted
-        if (!mounted) {
-          stream.getTracks().forEach(track => track.stop());
-          return;
-        }
-
-        console.log('Local stream obtained:', stream.getVideoTracks().length > 0 ? 'with video' : 'audio only');
-
-        // Set local stream
-        setLocalStream(stream);
-        
-        // Ensure video element exists and set stream
-        if (localVideoRef.current) {
-          console.log('Setting stream to video element');
-          localVideoRef.current.srcObject = stream;
-          
-          // Set video element properties
-          localVideoRef.current.muted = true;
-          localVideoRef.current.playsInline = true;
-          localVideoRef.current.autoplay = true;
-          
-          // Force play the video with retry
-          const playVideo = async () => {
-            try {
-              await localVideoRef.current.play();
-              console.log('Video playing successfully');
-            } catch (error) {
-              console.error('Error playing video:', error);
-              // Retry after a short delay
-              setTimeout(playVideo, 1000);
-            }
-          };
-          
-          playVideo();
-        }
-
-        // Initialize WebRTC service with the local stream
-        await webrtcService.initialize(roomId, userId, role);
-        webrtcService.setLocalStream(stream);
-
-        // Set up event handlers
-        webrtcService.onStream((remoteStream) => {
-          if (remoteStream && remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = remoteStream;
-            setRemoteStream(remoteStream);
-          }
-        });
-
-        if (mounted) {
-          setIsInitialized(true);
-          console.log('Local video initialized successfully');
-        }
-
-      } catch (error) {
-        console.error('Error initializing local video:', error);
-        toast.error('Failed to initialize video');
+    // Default constraints for other browsers
+    return {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      },
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
       }
     };
+  };
 
-    initializeLocalVideo();
+  // Validate props
+  useEffect(() => {
+    console.log('VideoCall props:', { roomId, userId, role });
+    if (!roomId || !userId || !role) {
+      const missing = [];
+      if (!roomId) missing.push('roomId');
+      if (!userId) missing.push('userId');
+      if (!role) missing.push('role');
+      const error = `Missing required props: ${missing.join(', ')}`;
+      console.error(error);
+      setError(error);
+      return;
+    }
+    setError(null);
+  }, [roomId, userId, role]);
 
+  // Initialize video
+  useEffect(() => {
+    if (error) return;
+
+    async function initVideo() {
+      try {
+        console.log('Initializing video with:', { roomId, userId, role });
+        
+        // First try: Get camera access with browser-specific constraints
+        const constraints = await getVideoConstraints();
+        console.log('Using constraints:', constraints);
+
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (mediaError) {
+          console.error('Error with initial constraints:', mediaError);
+          
+          // Second try: Minimal constraints with exact device
+          console.log('Retrying with minimal constraints and device selection...');
+          const devices = await checkMediaDevices();
+          const videoDeviceId = devices.videoDevices?.[0]?.deviceId;
+          
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: videoDeviceId ? { deviceId: { exact: videoDeviceId } } : true,
+              audio: true
+            });
+          } catch (minimalError) {
+            console.error('Error with minimal constraints:', minimalError);
+            
+            // Final try: Absolute minimal
+            console.log('Final attempt with basic constraints...');
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: true
+            });
+          }
+        }
+
+        console.log('Got media stream:', {
+          videoTracks: stream.getVideoTracks().length,
+          audioTracks: stream.getAudioTracks().length
+        });
+
+        // Log video track capabilities
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          console.log('Video track settings:', videoTrack.getSettings());
+          console.log('Video track constraints:', videoTrack.getConstraints());
+          console.log('Video track capabilities:', videoTrack.getCapabilities());
+        }
+
+        // Set stream to video element
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.muted = true; // Mute local video to prevent echo
+          
+          try {
+            await localVideoRef.current.play();
+            console.log('Local video element is playing');
+          } catch (playError) {
+            console.error('Error playing video:', playError);
+            // Add autoplay and playsinline attributes as fallback
+            localVideoRef.current.setAttribute('autoplay', '');
+            localVideoRef.current.setAttribute('playsinline', '');
+          }
+        } else {
+          console.error('No local video element found');
+        }
+
+        // Save stream
+        setLocalStream(stream);
+
+        // Initialize WebRTC
+        if (roomId && userId && role) {
+          await webrtcService.initialize(roomId, userId, role);
+          webrtcService.setLocalStream(stream);
+          setIsInitialized(true);
+          console.log('WebRTC initialized successfully');
+        }
+      } catch (error) {
+        console.error('Video initialization error:', error);
+        setError(error.message);
+        toast.error('Failed to access camera. Please check your camera permissions and make sure no other application is using the camera.');
+      }
+    }
+
+    initVideo();
+
+    // Cleanup
     return () => {
-      mounted = false;
       if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
+        console.log('Cleaning up video call');
+        localStream.getTracks().forEach(track => {
+          track.stop();
+          console.log(`Stopped ${track.kind} track`);
+        });
       }
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = null;
       }
       webrtcService.cleanup();
     };
-  }, [roomId, userId, role]);
+  }, [roomId, userId, role, error]);
+
+  // Handle remote stream
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    webrtcService.onStream((stream) => {
+      if (stream && remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
+        setRemoteStream(stream);
+      }
+    });
+  }, [isInitialized]);
 
   const toggleMute = () => {
     if (localStream) {
@@ -131,18 +246,37 @@ const VideoCall = ({ roomId, userId, role, onClose }) => {
       <div className="flex-1 grid grid-cols-1 gap-4 p-4">
         {/* Local Video */}
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover bg-black"
-            style={{ transform: 'scaleX(-1)' }} // Mirror the video for self-view
-          />
-          {isVideoOff && (
+          {error ? (
             <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/50">
-              <VideoOff className="w-12 h-12 text-indigo-400" />
+              <div className="text-center">
+                <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-400" />
+                <p className="text-red-400">{error}</p>
+              </div>
             </div>
+          ) : (
+            <>
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover bg-black"
+                style={{ transform: 'scaleX(-1)' }} // Mirror the video for self-view
+              />
+              {isVideoOff && (
+                <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/50">
+                  <VideoOff className="w-12 h-12 text-indigo-400" />
+                </div>
+              )}
+              {!localStream && (
+                <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/50">
+                  <div className="text-center">
+                    <User className="w-12 h-12 mx-auto mb-3 text-indigo-400" />
+                    <p className="text-indigo-400">Initializing camera...</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           <div className="absolute bottom-2 left-2 flex space-x-2">
             <button 
@@ -183,4 +317,4 @@ const VideoCall = ({ roomId, userId, role, onClose }) => {
   );
 };
 
-export default VideoCall; 
+export default VideoCall;

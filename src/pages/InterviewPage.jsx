@@ -621,8 +621,8 @@ const InterviewPage = () => {
         <div className="col-span-3 bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden border border-indigo-500/20">
           <VideoCall
             roomId={interviewId}
-            userId={user?.id}
-            role={user?.role}
+            userId={userId}
+            role={role}
             onClose={handleLeaveInterview}
           />
         </div>
@@ -728,8 +728,8 @@ const InterviewPage = () => {
         <div className="col-span-3 bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden border border-indigo-500/20">
           <VideoCall
             roomId={interviewId}
-            userId={user?.id}
-            role={user?.role}
+            userId={userId}
+            role={role}
             onClose={handleLeaveInterview}
           />
         </div>
