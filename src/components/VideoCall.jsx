@@ -1,214 +1,182 @@
 import React, { useEffect, useRef, useState } from 'react';
-import webrtcService from '../services/webrtc';
-import { webrtcAPI } from '../services/api';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Send } from 'lucide-react';
+import { webrtcService } from '../services/webrtc';
+import { toast } from 'react-hot-toast';
+import { Video, Mic, MicOff, VideoOff, Monitor, X, User } from 'lucide-react';
 
-const VideoCall = ({ roomId, onClose }) => {
+const VideoCall = ({ roomId, userId, role, onClose }) => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const messagesEndRef = useRef(null);
-  const cleanupRef = useRef(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [localStream, setLocalStream] = useState(null);
 
+  // Initialize local video stream
   useEffect(() => {
-    setupWebRTC();
-    return () => {
-      if (cleanupRef.current) {
-        cleanupRef.current();
+    let mounted = true;
+
+    const initializeLocalVideo = async () => {
+      try {
+        if (!roomId || !userId || !role) {
+          console.log('Waiting for required parameters...');
+          return;
+        }
+
+        // Get local media stream first
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "user"
+          },
+          audio: true
+        });
+
+        // Check if component is still mounted
+        if (!mounted) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        console.log('Local stream obtained:', stream.getVideoTracks().length > 0 ? 'with video' : 'audio only');
+
+        // Set local stream
+        setLocalStream(stream);
+        
+        // Ensure video element exists and set stream
+        if (localVideoRef.current) {
+          console.log('Setting stream to video element');
+          localVideoRef.current.srcObject = stream;
+          
+          // Set video element properties
+          localVideoRef.current.muted = true;
+          localVideoRef.current.playsInline = true;
+          localVideoRef.current.autoplay = true;
+          
+          // Force play the video with retry
+          const playVideo = async () => {
+            try {
+              await localVideoRef.current.play();
+              console.log('Video playing successfully');
+            } catch (error) {
+              console.error('Error playing video:', error);
+              // Retry after a short delay
+              setTimeout(playVideo, 1000);
+            }
+          };
+          
+          playVideo();
+        }
+
+        // Initialize WebRTC service with the local stream
+        await webrtcService.initialize(roomId, userId, role);
+        webrtcService.setLocalStream(stream);
+
+        // Set up event handlers
+        webrtcService.onStream((remoteStream) => {
+          if (remoteStream && remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+            setRemoteStream(remoteStream);
+          }
+        });
+
+        if (mounted) {
+          setIsInitialized(true);
+          console.log('Local video initialized successfully');
+        }
+
+      } catch (error) {
+        console.error('Error initializing local video:', error);
+        toast.error('Failed to initialize video');
       }
-      webrtcService.stopCall();
     };
-  }, []);
 
-  const setupWebRTC = async () => {
-    try {
-      // Set up callbacks
-      webrtcService.onRemoteStream = (stream) => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = stream;
-        }
-      };
+    initializeLocalVideo();
 
-      webrtcService.onMessage = (message) => {
-        setMessages(prev => [...prev, message]);
-      };
-
-      webrtcService.onIceCandidate = async (candidate) => {
-        try {
-          await webrtcAPI.sendIceCandidate(roomId, candidate);
-        } catch (error) {
-          console.error('Error sending ICE candidate:', error);
-        }
-      };
-
-      // Initialize WebRTC connection
-      await webrtcService.initializePeerConnection();
-      
-      // Start local stream
-      const localStream = await webrtcService.startLocalStream();
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = localStream;
+    return () => {
+      mounted = false;
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
       }
-
-      // Create and send offer
-      const offer = await webrtcService.createOffer();
-      await webrtcAPI.sendOffer(roomId, offer);
-
-      // Set up signaling listener
-      cleanupRef.current = webrtcAPI.listenToSignaling(roomId, {
-        onAnswer: async (answer) => {
-          await webrtcService.handleAnswer(answer);
-        },
-        onIceCandidate: async (candidate) => {
-          await webrtcService.handleIceCandidate(candidate);
-        },
-        onUserJoined: (user) => {
-          console.log('User joined:', user);
-        },
-        onUserLeft: (user) => {
-          console.log('User left:', user);
-        }
-      });
-
-    } catch (error) {
-      console.error('Error setting up WebRTC:', error);
-    }
-  };
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+      }
+      webrtcService.cleanup();
+    };
+  }, [roomId, userId, role]);
 
   const toggleMute = () => {
-    if (webrtcService.localStream) {
-      const audioTrack = webrtcService.localStream.getAudioTracks()[0];
-      audioTrack.enabled = !audioTrack.enabled;
+    if (localStream) {
+      const audioTracks = localStream.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = !track.enabled;
+      });
       setIsMuted(!isMuted);
     }
   };
 
   const toggleVideo = () => {
-    if (webrtcService.localStream) {
-      const videoTrack = webrtcService.localStream.getVideoTracks()[0];
-      videoTrack.enabled = !videoTrack.enabled;
+    if (localStream) {
+      const videoTracks = localStream.getVideoTracks();
+      videoTracks.forEach(track => {
+        track.enabled = !track.enabled;
+      });
       setIsVideoOff(!isVideoOff);
     }
   };
 
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (newMessage.trim()) {
-      webrtcService.sendMessage({
-        type: 'chat',
-        content: newMessage,
-        sender: 'me',
-        timestamp: new Date().toISOString()
-      });
-      setNewMessage('');
-    }
-  };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(scrollToBottom, [messages]);
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
-        {/* Video Grid */}
-        <div className="flex-1 grid grid-cols-2 gap-4 p-4">
-          <div className="relative bg-gray-900 rounded-lg overflow-hidden">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-2 left-2 text-white text-sm">
-              You
+    <div className="flex flex-col h-full bg-indigo-900/10 backdrop-blur-lg rounded-xl overflow-hidden border border-indigo-500/20">
+      <div className="flex-1 grid grid-cols-1 gap-4 p-4">
+        {/* Local Video */}
+        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover bg-black"
+            style={{ transform: 'scaleX(-1)' }} // Mirror the video for self-view
+          />
+          {isVideoOff && (
+            <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/50">
+              <VideoOff className="w-12 h-12 text-indigo-400" />
             </div>
+          )}
+          <div className="absolute bottom-2 left-2 flex space-x-2">
+            <button 
+              onClick={toggleMute}
+              className={`p-2 rounded-full ${isMuted ? 'bg-red-500' : 'bg-indigo-700'}`}
+            >
+              {isMuted ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4 text-white" />}
+            </button>
+            <button 
+              onClick={toggleVideo}
+              className={`p-2 rounded-full ${isVideoOff ? 'bg-red-500' : 'bg-indigo-700'}`}
+            >
+              {isVideoOff ? <VideoOff className="w-4 h-4 text-white" /> : <Video className="w-4 h-4 text-white" />}
+            </button>
           </div>
-          <div className="relative bg-gray-900 rounded-lg overflow-hidden">
+        </div>
+
+        {/* Remote Video */}
+        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+          {remoteStream ? (
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover bg-black"
             />
-            <div className="absolute bottom-2 left-2 text-white text-sm">
-              Remote User
-            </div>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex justify-center space-x-4">
-            <button
-              onClick={toggleMute}
-              className={`p-3 rounded-full ${
-                isMuted ? 'bg-red-500' : 'bg-gray-200 dark:bg-gray-700'
-              } text-white`}
-            >
-              {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
-            </button>
-            <button
-              onClick={toggleVideo}
-              className={`p-3 rounded-full ${
-                isVideoOff ? 'bg-red-500' : 'bg-gray-200 dark:bg-gray-700'
-              } text-white`}
-            >
-              {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
-            </button>
-            <button
-              onClick={onClose}
-              className="p-3 rounded-full bg-red-500 text-white"
-            >
-              <PhoneOff size={24} />
-            </button>
-          </div>
-        </div>
-
-        {/* Chat */}
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-          <div className="h-48 overflow-y-auto mb-4">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`mb-2 ${
-                  message.sender === 'me' ? 'text-right' : 'text-left'
-                }`}
-              >
-                <div
-                  className={`inline-block p-2 rounded-lg ${
-                    message.sender === 'me'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700'
-                  }`}
-                >
-                  {message.content}
-                </div>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-indigo-900/50">
+              <div className="text-center">
+                <User className="w-12 h-12 mx-auto mb-3 text-indigo-400" />
+                <p className="text-indigo-400">Waiting for {role === 'interviewer' ? 'candidate' : 'interviewer'} to join...</p>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-          <form onSubmit={sendMessage} className="flex space-x-2">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              <Send size={20} />
-            </button>
-          </form>
+            </div>
+          )}
         </div>
       </div>
     </div>
